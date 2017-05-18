@@ -33,7 +33,7 @@
 @dynamic flashMode;
 @dynamic devicePosition;
 
-- (id)init
+- (instancetype)init
 {
     if( (self = [super init]) != nil ) {
         _status = HJCameraManagerStatusIdle;
@@ -45,7 +45,7 @@
     return self;
 }
 
-+ (HJCameraManager *)sharedManager
++ (HJCameraManager *)defaultHJCameraManager
 {
     static dispatch_once_t once;
     static HJCameraManager *sharedInstance;
@@ -70,7 +70,7 @@
     if( (_session = [[AVCaptureSession alloc] init]) == nil ) {
         goto START_WITH_PREVIEW_FAILED;
     }
-    if( [preset length] > 0 ) {
+    if( preset.length > 0 ) {
         _session.sessionPreset = preset;
     }
     if( (captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]) == nil ) {
@@ -91,7 +91,7 @@
     if( (_stillImageOutput = [[AVCaptureStillImageOutput alloc] init]) == nil ) {
         goto START_WITH_PREVIEW_FAILED;
     }
-    [_stillImageOutput setOutputSettings:@{AVVideoCodecJPEG:AVVideoCodecKey}];
+    _stillImageOutput.outputSettings = @{AVVideoCodecJPEG:AVVideoCodecKey};
     if( [_session canAddOutput:_stillImageOutput] == NO ) {
         goto START_WITH_PREVIEW_FAILED;
     }
@@ -153,7 +153,7 @@ START_WITH_PREVIEW_FAILED:
     [_lock lock];
     
     if( _status == HJCameraManagerStatusRunning ) {
-        self.devicePosition = ([[_deviceInput device] position] == AVCaptureDevicePositionFront) ? AVCaptureDevicePositionBack : AVCaptureDevicePositionFront;
+        self.devicePosition = (_deviceInput.device.position == AVCaptureDevicePositionFront) ? AVCaptureDevicePositionBack : AVCaptureDevicePositionFront;
         result = YES;
     }
     
@@ -265,8 +265,8 @@ START_WITH_PREVIEW_FAILED:
 {
     AVCaptureConnection *videoConnection = nil;
     for( AVCaptureConnection *connection in _stillImageOutput.connections ) {
-        for( AVCaptureInputPort *inputPort in [connection inputPorts] ) {
-            if( [[inputPort mediaType] isEqualToString:AVMediaTypeVideo] == YES ) {
+        for( AVCaptureInputPort *inputPort in connection.inputPorts ) {
+            if( [inputPort.mediaType isEqualToString:AVMediaTypeVideo] == YES ) {
                 videoConnection = connection;
                 break;
             }
@@ -283,7 +283,7 @@ START_WITH_PREVIEW_FAILED:
 {
     NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
     for( AVCaptureDevice *device in devices ) {
-        if( [device position] == position ) {
+        if( device.position == position ) {
             return device;
         }
     }
@@ -293,7 +293,7 @@ START_WITH_PREVIEW_FAILED:
 
 - (NSInteger)countOfCamera
 {
-    return [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo] count];
+    return [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo].count;
 }
 
 - (HJCameraManagerFlashMode)flashMode
@@ -302,8 +302,8 @@ START_WITH_PREVIEW_FAILED:
     
     [_lock lock];
     
-    AVCaptureDevice *captureDevice = [_deviceInput device];
-    AVCaptureFlashMode flashMode = (captureDevice == nil) ? AVCaptureFlashModeOff : [captureDevice flashMode];
+    AVCaptureDevice *captureDevice = _deviceInput.device;
+    AVCaptureFlashMode flashMode = (captureDevice == nil) ? AVCaptureFlashModeOff : captureDevice.flashMode;
     switch( flashMode ) {
         case AVCaptureFlashModeOn :
             mode = HJCameraManagerFlashModeOn;
@@ -342,12 +342,12 @@ START_WITH_PREVIEW_FAILED:
     
     [_lock lock];
     
-    AVCaptureDevice *captureDevice = [_deviceInput device];
-    if( ([captureDevice hasFlash] == YES) && ([captureDevice isFlashModeSupported:mode] == YES) ) {
+    AVCaptureDevice *captureDevice = _deviceInput.device;
+    if( (captureDevice.hasFlash == YES) && ([captureDevice isFlashModeSupported:mode] == YES) ) {
         if( _status == HJCameraManagerStatusRunning ) {
             NSError *error = nil;
             if( [captureDevice lockForConfiguration:&error] == YES ) {
-                [captureDevice setFlashMode:mode];
+                captureDevice.flashMode = mode;
                 [captureDevice unlockForConfiguration];
             }
         }
@@ -362,7 +362,7 @@ START_WITH_PREVIEW_FAILED:
     
     [_lock lock];
     
-    AVCaptureDevicePosition devicePosition = (_deviceInput == nil) ? AVCaptureDevicePositionUnspecified : [[_deviceInput device] position];
+    AVCaptureDevicePosition devicePosition = (_deviceInput == nil) ? AVCaptureDevicePositionUnspecified : _deviceInput.device.position;
     switch( devicePosition ) {
         case AVCaptureDevicePositionBack :
             position = HJCameraManagerDevicePositionBack;
@@ -396,7 +396,7 @@ START_WITH_PREVIEW_FAILED:
     [_lock lock];
     
     if( _status == HJCameraManagerStatusRunning ) {
-        if( [[_deviceInput device] position] != position ) {
+        if( _deviceInput.device.position != position ) {
             AVCaptureDevice *captureDevice;
             if( (captureDevice = [self captureDeviceForPosition:position]) != nil ) {
                 AVCaptureDeviceInput *captureDeviceInput;

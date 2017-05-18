@@ -14,7 +14,7 @@
 #define     HJCameraManagerNotifyParameterKeyStatus         @"HJCameraManagerNotifyParameterKeyStatus"
 #define     HJCameraManagerNotifyParameterKeyStillImage     @"HJCameraManagerNotifyParameterKeyStillImage"
 
-typedef enum _HJCameraManagerStatus_
+typedef NS_ENUM(NSInteger, HJCameraManagerStatus)
 {
     HJCameraManagerStatusDummy,
     HJCameraManagerStatusIdle,
@@ -22,38 +22,34 @@ typedef enum _HJCameraManagerStatus_
     HJCameraManagerStatusStillImageCaptured,
     HJCameraManagerStatusStillImageCaptureFailed,
     HJCameraManagerStatusAccessDenied,
-    HJCameraManagerStatusInternalError,
-    kCountOfHJCameraManagerStatus
-    
-} HJCameraManagerStatus;
+    HJCameraManagerStatusInternalError
+};
 
-typedef enum _HJCameraManagerFlashMode_
+typedef NS_ENUM(NSInteger, HJCameraManagerFlashMode)
 {
     HJCameraManagerFlashModeUnspecified,
     HJCameraManagerFlashModeOff,
     HJCameraManagerFlashModeOn,
     HJCameraManagerFlashModeAuto
-    
-} HJCameraManagerFlashMode;
+};
 
-typedef enum _HJCameraManagerDevicePosition_
+typedef NS_ENUM(NSInteger, HJCameraManagerDevicePosition)
 {
     HJCameraManagerDevicePositionUnspecified,
     HJCameraManagerDevicePositionBack,
     HJCameraManagerDevicePositionFront
-    
-} HJCameraManagerDevicePosition;
+};
 
-typedef void(^HJCameraManagerCompletion)(HJCameraManagerStatus, UIImage *);
+typedef void(^HJCameraManagerCompletion)(HJCameraManagerStatus, UIImage * _Nullable);
 
 @interface HJCameraManager : NSObject
 
-+ (HJCameraManager *)sharedManager;
++ (HJCameraManager * _Nonnull)defaultHJCameraManager;
 
-- (BOOL)startWithPreviewView:(UIView *)previewView preset:(NSString *)preset;
+- (BOOL)startWithPreviewView:(UIView * _Nullable)previewView preset:(NSString * _Nullable)preset;
 - (void)stop;
 - (BOOL)toggleCamera;
-- (BOOL)captureStillImage:(HJCameraManagerCompletion)completion;
+- (BOOL)captureStillImage:(HJCameraManagerCompletion _Nullable)completion;
 
 @property (nonatomic, readonly) HJCameraManagerStatus status;
 @property (nonatomic, readonly) NSInteger countOfCamera;
