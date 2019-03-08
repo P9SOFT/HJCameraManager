@@ -11,39 +11,48 @@ import UIKit
 
 class PhotoViewController: UIViewController, UIScrollViewDelegate {
     
-    var image:UIImage?
-    var scrollView:UIScrollView?
-    var imageView:UIImageView?
+    private let scrollView:UIScrollView = UIScrollView()
+    private let imageView:UIImageView = UIImageView()
+    private let label:UILabel = UILabel()
+    
+    var image:UIImage? {
+        didSet {
+            if let image = image {
+                imageView.image = image
+                label.text = "resolution \(image.size.width)x\(image.size.height), scale factor \(image.scale)\r\nback to swipe back."
+            } else {
+                imageView.image = nil
+                label.text = "no image\r\nback to swipe back."
+            }
+            updateLayout()
+        }
+    }
     
     override func viewDidLoad() {
         
         super.viewDidLoad()
         
-        self.automaticallyAdjustsScrollViewInsets = false;
-        self.view.backgroundColor = UIColor.whiteColor()
+        automaticallyAdjustsScrollViewInsets = false;
+        view.backgroundColor = .black
         
-        if image == nil {
-            return
-        }
+        scrollView.delegate = self;
+        scrollView.minimumZoomScale = 1.0
+        scrollView.maximumZoomScale = 5.0
+        scrollView.backgroundColor = .clear
+        view.addSubview(scrollView)
         
-        scrollView = UIScrollView()
-        if scrollView == nil {
-            return
-        }
-        scrollView!.delegate = self;
-        scrollView!.minimumZoomScale = 1.0
-        scrollView!.maximumZoomScale = 5.0
-        scrollView!.backgroundColor = UIColor.clearColor()
-        self.view.addSubview(scrollView!)
+        imageView.contentMode = .scaleAspectFill
         
-        imageView = UIImageView(image:image!)
-        if imageView == nil {
-            return
-        }
-        imageView!.contentMode = UIViewContentMode.ScaleAspectFill
-        scrollView?.addSubview(imageView!)
+        label.font = UIFont.boldSystemFont(ofSize: 9)
+        label.textColor = .white
+        label.backgroundColor = UIColor.init(white: 0, alpha: 0.2)
+        label.lineBreakMode = .byWordWrapping
+        label.numberOfLines = 2
+        label.textAlignment = .center
         
+        scrollView.addSubview(imageView)
         
+        view.addSubview(label)
     }
     
     override func didReceiveMemoryWarning() {
@@ -52,29 +61,9 @@ class PhotoViewController: UIViewController, UIScrollViewDelegate {
     }
     
     override func viewDidLayoutSubviews() {
-        
         super.viewDidLayoutSubviews()
         
-        var frame:CGRect = self.view.bounds
-        frame.origin.y += UIApplication.sharedApplication().statusBarFrame.size.height
-        frame.size.height -= UIApplication.sharedApplication().statusBarFrame.size.height
-        scrollView?.frame = frame
-        if let image = imageView?.image {
-            var imageFrame = CGRectZero
-            if frame.size.width < frame.size.height {
-                imageFrame.size.width = scrollView!.bounds.size.width
-                imageFrame.size.height = image.size.height * (scrollView!.bounds.size.width/image.size.width)
-            } else {
-                imageFrame.size.height = scrollView!.bounds.size.height
-                imageFrame.size.width = image.size.width * (scrollView!.bounds.size.height/image.size.height)
-            }
-            imageFrame.size.width *= scrollView!.zoomScale
-            imageFrame.size.height *= scrollView!.zoomScale
-            scrollView!.contentSize = imageFrame.size
-            imageView!.frame = imageFrame
-            imageView!.image = image
-            updateUpdateToCenterOfViewForScrollView(imageView!, scrollView:scrollView!)
-        }
+        updateLayout()
     }
     
     func viewForZoomingInScrollView(scrollView: UIScrollView) -> UIView? {
@@ -82,21 +71,47 @@ class PhotoViewController: UIViewController, UIScrollViewDelegate {
         return imageView
     }
     
-    func scrollViewDidScroll(scrollView: UIScrollView) {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
         
-        print( scrollView.zoomScale, scrollView.contentSize )
-        if imageView != nil {
-            self.updateUpdateToCenterOfViewForScrollView(imageView!, scrollView:scrollView)
-        }
+        self.updateUpdateToCenterOfViewForScrollView(view: imageView, scrollView:scrollView)
     }
     
     private func updateUpdateToCenterOfViewForScrollView(view:UIView, scrollView:UIScrollView) {
         
         let containerSize = scrollView.bounds.size
         var frame = view.frame
-        frame.origin.x = (frame.size.width < containerSize.width) ? ((containerSize.width-frame.size.width)/2.0) : 0.0
-        frame.origin.y = (frame.size.height < containerSize.height) ? ((containerSize.height-frame.size.height)/2.0) : 0.0
+        frame.origin.x = (frame.size.width < containerSize.width) ? ((containerSize.width-frame.size.width)*0.5) : 0.0
+        frame.origin.y = (frame.size.height < containerSize.height) ? ((containerSize.height-frame.size.height)*0.5) : 0.0
         view.frame = frame
     }
+    
+    private func updateLayout() {
+        
+        var frame:CGRect = view.bounds
+        frame.origin.y += UIApplication.shared.statusBarFrame.size.height
+        frame.size.height -= UIApplication.shared.statusBarFrame.size.height
+        scrollView.frame = frame
+        if let image = imageView.image {
+            var imageFrame:CGRect = .zero
+            if frame.size.width < frame.size.height {
+                imageFrame.size.width = scrollView.bounds.size.width
+                imageFrame.size.height = image.size.height * (scrollView.bounds.size.width/image.size.width)
+            } else {
+                imageFrame.size.height = scrollView.bounds.size.height
+                imageFrame.size.width = image.size.width * (scrollView.bounds.size.height/image.size.height)
+            }
+            imageFrame.size.width *= scrollView.zoomScale
+            imageFrame.size.height *= scrollView.zoomScale
+            scrollView.contentSize = imageFrame.size
+            imageView.frame = imageFrame
+            imageView.image = image
+            updateUpdateToCenterOfViewForScrollView(view: imageView, scrollView:scrollView)
+            var labelFrame:CGRect = .zero
+            labelFrame.size.width = ((label.text ?? "-") as NSString).size(withAttributes: [NSAttributedString.Key.font:label.font]).width + 10
+            labelFrame.size.height = 30
+            labelFrame.origin.x = (frame.size.width - labelFrame.size.width)*0.5
+            labelFrame.origin.y = 40
+            label.frame = labelFrame
+        }
+    }
 }
-

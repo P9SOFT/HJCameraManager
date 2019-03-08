@@ -9,21 +9,23 @@
 
 #import "HJCameraManager.h"
 
-@interface HJCameraManager ()
+@interface HJCameraManager () <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     HJCameraManagerStatus       _status;
     AVCaptureSession            *_session;
     AVCaptureVideoPreviewLayer  *_videoPreviewLayer;
     AVCaptureDeviceInput        *_deviceInput;
     AVCaptureStillImageOutput   *_stillImageOutput;
+    AVCaptureVideoDataOutput    *_videoOutput;
+    dispatch_queue_t            _serialQueue;
+    NSMutableArray              *_capturePreviewQueue;
     NSLock                      *_lock;
 }
 
-- (void)postNotifyWithStatus:(HJCameraManagerStatus)status;
-- (void)postNotifyStillImageCapturedWithImage:(UIImage *)image;
-- (void)postNotifyWithParamDict:(NSDictionary *)paramDict;
+- (void)postNotifyWithStatus:(HJCameraManagerStatus)status image:(UIImage *)image completion:(HJCameraManagerCompletion)completion;
 - (AVCaptureConnection *)captureConnection;
 - (AVCaptureDevice *)captureDeviceForPosition:(AVCaptureDevicePosition)position;
+- (UIImage *)imageFromSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 
 @end
 
@@ -37,6 +39,10 @@
 {
     if( (self = [super init]) != nil ) {
         _status = HJCameraManagerStatusIdle;
+        _serialQueue = dispatch_queue_create("p9soft.manager.hjcamera", DISPATCH_QUEUE_SERIAL);
+        if( (_capturePreviewQueue = [NSMutableArray new]) == nil ) {
+            return nil;
+        }
         if( (_lock = [[NSLock alloc] init]) == nil ) {
             return nil;
         }
@@ -96,9 +102,18 @@
         goto START_WITH_PREVIEW_FAILED;
     }
     [_session addOutput:_stillImageOutput];
+    if( (_videoOutput = [[AVCaptureVideoDataOutput alloc] init]) == nil ) {
+        goto START_WITH_PREVIEW_FAILED;
+    }
+    _videoOutput.videoSettings = @{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+    [_videoOutput setSampleBufferDelegate:self queue:_serialQueue];
+    if( [_session canAddOutput:_videoOutput] == NO ) {
+        goto START_WITH_PREVIEW_FAILED;
+    }
+    [_session addOutput:_videoOutput];
     [_session startRunning];
     _status = HJCameraManagerStatusRunning;
-    [self postNotifyWithStatus:HJCameraManagerStatusRunning];
+    [self postNotifyWithStatus:HJCameraManagerStatusRunning image:nil completion:nil];
     
     [_lock unlock];
     
@@ -123,7 +138,7 @@ START_WITH_PREVIEW_FAILED:
     
     [_lock unlock];
     
-    [self postNotifyWithStatus:HJCameraManagerStatusAccessDenied];
+    [self postNotifyWithStatus:HJCameraManagerStatusAccessDenied image:nil completion:nil];
     
     return NO;
 }
@@ -140,7 +155,7 @@ START_WITH_PREVIEW_FAILED:
         _deviceInput = nil;
         _stillImageOutput = nil;
         _status = HJCameraManagerStatusIdle;
-        [self postNotifyWithStatus: HJCameraManagerStatusIdle];
+        [self postNotifyWithStatus: HJCameraManagerStatusIdle image:nil completion:nil];
     }
     
     [_lock unlock];
@@ -194,7 +209,7 @@ START_WITH_PREVIEW_FAILED:
     return result;
 }
 
-- (BOOL)captureStillImage:(HJCameraManagerCompletion)completion
+- (void)captureStillImage:(HJCameraManagerCompletion)completion
 {
     [_lock lock];
     
@@ -203,7 +218,7 @@ START_WITH_PREVIEW_FAILED:
         if( completion != nil ) {
             completion(HJCameraManagerStatusInternalError, nil);
         }
-        return NO;
+        return;
     }
     
     AVCaptureConnection *videoConnection = [self captureConnection];
@@ -212,55 +227,52 @@ START_WITH_PREVIEW_FAILED:
         if( completion != nil ) {
             completion(HJCameraManagerStatusInternalError, nil);
         }
-        return NO;
+        return;
     }
     
     [_stillImageOutput captureStillImageAsynchronouslyFromConnection: videoConnection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
         UIImage *image = nil;
-        NSData *data;
-        if( (data = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer]) != nil ) {
-            image = [[UIImage alloc] initWithData:data];
+        if( imageDataSampleBuffer != NULL ) {
+            NSData *data = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
+            if( data != nil ) {
+                image = [[UIImage alloc] initWithData:data];
+            }
         }
         if( image != nil ) {
-            if( completion != nil ) {
-                completion(HJCameraManagerStatusStillImageCaptured, image);
-            }
-            [self postNotifyStillImageCapturedWithImage:image];
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:image completion:completion];
         } else {
-            if( completion != nil ) {
-                completion(HJCameraManagerStatusStillImageCaptureFailed, nil);
-            }
-            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed];
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil completion:completion];
         }
     }];
     
     [_lock unlock];
+}
+
+- (void)capturePreviewImage:(HJCameraManagerCompletion)completion
+{
+    if( completion == nil ) {
+        return;
+    }
+    [_lock lock];
+    [_capturePreviewQueue addObject:completion];
+    [_lock unlock];
+}
+
+- (void)postNotifyWithStatus:(HJCameraManagerStatus)status image:(UIImage *)image completion:(HJCameraManagerCompletion)completion
+{
+    NSMutableDictionary *paramDict = [NSMutableDictionary new];
+    paramDict[HJCameraManagerNotifyParameterKeyStatus] = @((NSInteger)status);
+    if( image != nil ) {
+        paramDict[HJCameraManagerNotifyParameterKeyStillImage] = image;
+    }
+    dispatch_async( dispatch_get_main_queue(), ^{
+        if( completion != nil ) {
+            completion(status, image);
+        }
+        [[NSNotificationCenter defaultCenter] postNotificationName:HJCameraManagerNotification object:self userInfo:paramDict];
+    });
+}
     
-    return YES;
-}
-
-- (void)postNotifyWithStatus:(HJCameraManagerStatus)status
-{
-    dispatch_async( dispatch_get_main_queue(), ^{
-        [self postNotifyWithParamDict:@{HJCameraManagerNotifyParameterKeyStatus:@((NSInteger)status)}];
-    });
-}
-
-- (void)postNotifyStillImageCapturedWithImage:(UIImage *)image
-{
-    NSDictionary *paramDict = @{HJCameraManagerNotifyParameterKeyStatus:@((NSInteger)HJCameraManagerStatusStillImageCaptured),
-                                HJCameraManagerNotifyParameterKeyStillImage:image
-                                };
-    dispatch_async( dispatch_get_main_queue(), ^{
-        [self postNotifyWithParamDict:paramDict];
-    });
-}
-
-- (void)postNotifyWithParamDict:(NSDictionary *)paramDict
-{
-    [[NSNotificationCenter defaultCenter] postNotificationName:HJCameraManagerNotification object:self userInfo:paramDict];
-}
-
 - (AVCaptureConnection *)captureConnection
 {
     AVCaptureConnection *videoConnection = nil;
@@ -289,6 +301,32 @@ START_WITH_PREVIEW_FAILED:
     }
     
     return nil;
+}
+    
+- (UIImage *)imageFromSampleBuffer:(CMSampleBufferRef)sampleBuffer
+{
+    if( sampleBuffer == NULL ) {
+        return nil;
+    }
+    UIImage *image = nil;
+    CVImageBufferRef cvImageBuff = CMSampleBufferGetImageBuffer(sampleBuffer);
+    if( cvImageBuff != nil ) {
+        CVPixelBufferLockBaseAddress(cvImageBuff, kCVPixelBufferLock_ReadOnly);
+        void *baseAddress = CVPixelBufferGetBaseAddress(cvImageBuff);
+        size_t w = CVPixelBufferGetWidth(cvImageBuff);
+        size_t h = CVPixelBufferGetHeight(cvImageBuff);
+        size_t bytesPerRow = CVPixelBufferGetBytesPerRow(cvImageBuff);
+        CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+        CGContextRef context = CGBitmapContextCreate(baseAddress, w, h, 8, bytesPerRow, colorSpace, (kCGImageAlphaPremultipliedFirst|kCGBitmapByteOrder32Little));
+        CGImageRef imageRef = CGBitmapContextCreateImage(context);
+        CVPixelBufferUnlockBaseAddress(cvImageBuff, kCVPixelBufferLock_ReadOnly);
+        CGContextRelease(context);
+        CGColorSpaceRelease(colorSpace);
+        //image = [UIImage imageWithCGImage:imageRef];
+        image =  [UIImage imageWithCGImage:imageRef scale:1.0 orientation:UIImageOrientationRight];
+        CGImageRelease(imageRef);
+    }
+    return image;
 }
 
 - (NSInteger)countOfCamera
@@ -417,6 +455,34 @@ START_WITH_PREVIEW_FAILED:
     }
     
     [_lock unlock];
+}
+
+- (void)captureOutput:(AVCaptureOutput *)output didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
+{
+    if( sampleBuffer == NULL ) {
+        return;
+    }
+    UIImage *image = nil;
+    [_lock lock];
+    if( _capturePreviewQueue.count > 0 ) {
+        HJCameraManagerCompletion completion = [_capturePreviewQueue firstObject];
+        image = [self imageFromSampleBuffer:sampleBuffer];
+        if( image != nil ) {
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:image completion:completion];
+        } else {
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil completion:completion];
+        }
+        [_capturePreviewQueue removeObjectAtIndex:0];
+    }
+    [_lock unlock];
+    if( _notifyPreviewImage == YES ) {
+        if( image == nil ) {
+            image = [self imageFromSampleBuffer:sampleBuffer];
+        }
+        if( image != nil ) {
+            [self postNotifyWithStatus:HJCameraManagerStatusPreviewImageCaptured image:image completion:nil];
+        }
+    }
 }
 
 @end

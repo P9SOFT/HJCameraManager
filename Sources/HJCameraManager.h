@@ -14,50 +14,50 @@
 #define     HJCameraManagerNotifyParameterKeyStatus         @"HJCameraManagerNotifyParameterKeyStatus"
 #define     HJCameraManagerNotifyParameterKeyStillImage     @"HJCameraManagerNotifyParameterKeyStillImage"
 
-typedef enum _HJCameraManagerStatus_
+typedef NS_ENUM(NSInteger, HJCameraManagerStatus)
 {
     HJCameraManagerStatusDummy,
     HJCameraManagerStatusIdle,
     HJCameraManagerStatusRunning,
     HJCameraManagerStatusStillImageCaptured,
     HJCameraManagerStatusStillImageCaptureFailed,
+    HJCameraManagerStatusPreviewImageCaptured,
     HJCameraManagerStatusAccessDenied,
     HJCameraManagerStatusInternalError,
     kCountOfHJCameraManagerStatus
-    
-} HJCameraManagerStatus;
+};
 
-typedef enum _HJCameraManagerFlashMode_
+typedef NS_ENUM(NSInteger, HJCameraManagerFlashMode)
 {
     HJCameraManagerFlashModeUnspecified,
     HJCameraManagerFlashModeOff,
     HJCameraManagerFlashModeOn,
     HJCameraManagerFlashModeAuto
-    
-} HJCameraManagerFlashMode;
+};
 
-typedef enum _HJCameraManagerDevicePosition_
+typedef NS_ENUM(NSInteger, HJCameraManagerDevicePosition)
 {
     HJCameraManagerDevicePositionUnspecified,
     HJCameraManagerDevicePositionBack,
     HJCameraManagerDevicePositionFront
-    
-} HJCameraManagerDevicePosition;
+};
 
-typedef void(^HJCameraManagerCompletion)(HJCameraManagerStatus, UIImage *);
+typedef void(^HJCameraManagerCompletion)(HJCameraManagerStatus, UIImage * _Nullable);
 
 @interface HJCameraManager : NSObject
 
 + (HJCameraManager *)sharedManager;
 
-- (BOOL)startWithPreviewView:(UIView *)previewView preset:(NSString *)preset;
+- (BOOL)startWithPreviewView:(UIView * _Nullable)previewView preset:(NSString * _Nullable)preset;
 - (void)stop;
 - (BOOL)toggleCamera;
-- (BOOL)captureStillImage:(HJCameraManagerCompletion)completion;
+- (void)captureStillImage:(HJCameraManagerCompletion _Nullable)completion;
+- (void)capturePreviewImage:(HJCameraManagerCompletion _Nullable)completion;
 
 @property (nonatomic, readonly) HJCameraManagerStatus status;
 @property (nonatomic, readonly) NSInteger countOfCamera;
 @property (nonatomic, assign) HJCameraManagerFlashMode flashMode;
 @property (nonatomic, assign) HJCameraManagerDevicePosition devicePosition;
+@property (nonatomic, assign) BOOL notifyPreviewImage;
 
 @end

@@ -18,23 +18,25 @@ class CaptureViewController: UIViewController {
         super.viewDidLoad()
         
         self.automaticallyAdjustsScrollViewInsets = false;
-        self.view.backgroundColor = UIColor.whiteColor()
+        self.view.backgroundColor = .white
         
-        cameraView = NSBundle.mainBundle().loadNibNamed("CameraView", owner:self, options:nil).first as? CameraView
-        if cameraView == nil {
+        cameraView = Bundle.main.loadNibNamed("CameraView", owner:self, options:nil)?.first as? CameraView
+        guard let cameraView = cameraView else {
             return
         }
-        self.view.addSubview(cameraView!)
+        self.view.addSubview(cameraView)
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector:"cameraManagerReport:", name:HJCameraManagerNotification, object:nil)
-        cameraView!.flashButton.addTarget(self, action:"flashButtonTouchUpInside:", forControlEvents:UIControlEvents.TouchUpInside)
-        cameraView!.positionButton.addTarget(self, action:"positionButtonTouchUpInside:", forControlEvents:UIControlEvents.TouchUpInside)
-        cameraView!.captureButton.addTarget(self, action:"captureButtonTouchUpInside:", forControlEvents:UIControlEvents.TouchUpInside)
+        NotificationCenter.default.addObserver(self, selector:#selector(cameraManagerReport), name:NSNotification.Name(rawValue: HJCameraManagerNotification), object:nil)
+        
+        cameraView.flashButton.addTarget(self, action:#selector(flashButtonTouchUpInside(sender:)), for:.touchUpInside)
+        cameraView.positionButton.addTarget(self, action:#selector(positionButtonTouchUpInside(sender:)), for:.touchUpInside)
+        cameraView.stillCaptureButton.addTarget(self, action:#selector(stillCaptureButtonTouchUpInside(sender:)), for:.touchUpInside)
+        cameraView.previewCaptureButton.addTarget(self, action:#selector(previewCaptureButtonTouchUpInside(sender:)), for:.touchUpInside)
     }
     
     deinit {
         
-        NSNotificationCenter.defaultCenter().removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
     }
     
     override func didReceiveMemoryWarning() {
@@ -47,29 +49,29 @@ class CaptureViewController: UIViewController {
         super.viewDidLayoutSubviews()
         
         var frame:CGRect = self.view.bounds
-        frame.origin.y += UIApplication.sharedApplication().statusBarFrame.size.height
-        frame.size.height -= UIApplication.sharedApplication().statusBarFrame.size.height
+        frame.origin.y += UIApplication.shared.statusBarFrame.size.height
+        frame.size.height -= UIApplication.shared.statusBarFrame.size.height
         cameraView?.frame = frame
     }
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         
         super.viewDidAppear(animated)
         
         // start camera when view did appear
-        let cameraStatus = HJCameraManager.sharedManager().startWithPreviewView(cameraView!.frameView, preset: AVCaptureSessionPresetPhoto)
-        self.updateCameraStatus(cameraStatus)
+        let cameraStatus = HJCameraManager.shared().start(withPreviewView: cameraView!.frameView, preset: AVCaptureSession.Preset.photo.rawValue)
+        self.updateCameraStatus(enable: cameraStatus)
     }
     
-    override func viewDidDisappear(animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         
         super.viewDidDisappear(animated)
         
         // stop camera when view did disappear
-        HJCameraManager.sharedManager().stop()
+        HJCameraManager.shared().stop()
     }
     
-    func cameraManagerReport(notification:NSNotification) {
+    @objc func cameraManagerReport(notification:NSNotification) {
         
         // you can write code as below for result handling, but in this case, just print log.
         // because we already pass the code for result handler when requesting data at 'captureButtonTouchUpInside'.
@@ -78,54 +80,54 @@ class CaptureViewController: UIViewController {
         }
     }
     
-    func flashButtonTouchUpInside(sender: AnyObject) {
+    @objc func flashButtonTouchUpInside(sender: AnyObject) {
         
-        let currentFlashMode = HJCameraManager.sharedManager().flashMode
+        let currentFlashMode = HJCameraManager.shared().flashMode
         var nextFlashMode:HJCameraManagerFlashMode?
         
         switch( currentFlashMode ) {
-        case HJCameraManagerFlashModeOff :
-            nextFlashMode = HJCameraManagerFlashModeOn
-        case HJCameraManagerFlashModeOn :
-            nextFlashMode = HJCameraManagerFlashModeAuto
-        case HJCameraManagerFlashModeAuto :
-            nextFlashMode = HJCameraManagerFlashModeOff
+        case .off :
+            nextFlashMode = .on
+        case .on :
+            nextFlashMode = .auto
+        case .auto :
+            nextFlashMode = .off
         default :
             nextFlashMode = currentFlashMode
         }
         if currentFlashMode != nextFlashMode {
             // change flash mode of camera
-            HJCameraManager.sharedManager().flashMode = nextFlashMode!
-            self.updateCameraStatus(true)
+            HJCameraManager.shared().flashMode = nextFlashMode!
+            self.updateCameraStatus(enable: true)
         }
     }
     
-    func positionButtonTouchUpInside(sender: AnyObject) {
+    @objc func positionButtonTouchUpInside(sender: AnyObject) {
         
-        let currentPosition = HJCameraManager.sharedManager().devicePosition
+        let currentPosition = HJCameraManager.shared().devicePosition
         var nextPosition:HJCameraManagerDevicePosition?
         
         switch( currentPosition ) {
-        case HJCameraManagerDevicePositionBack :
-            nextPosition = HJCameraManagerDevicePositionFront
-        case HJCameraManagerDevicePositionFront :
-            nextPosition = HJCameraManagerDevicePositionBack
+        case .back :
+            nextPosition = .front
+        case .front :
+            nextPosition = .back
         default :
             nextPosition = currentPosition
         }
         if currentPosition != nextPosition {
             // change device position of camera
-            HJCameraManager.sharedManager().devicePosition = nextPosition!
-            self.updateCameraStatus(true)
+            HJCameraManager.shared().devicePosition = nextPosition!
+            self.updateCameraStatus(enable: true)
         }
     }
     
-    func captureButtonTouchUpInside(sender: AnyObject) {
+    @objc func stillCaptureButtonTouchUpInside(sender: AnyObject) {
         
         // capture still image from camera.
         // you can also write code for result handling with response of notification handler 'cameraManagerReport' as above.
-        HJCameraManager.sharedManager().captureStillImage { (status:HJCameraManagerStatus, image:UIImage!) -> Void in
-            if image != nil {
+        HJCameraManager.shared().captureStillImage { (status:HJCameraManagerStatus, image:UIImage?) in
+            if let image = image {
                 let photoViewController = PhotoViewController()
                 photoViewController.image = image
                 self.navigationController?.pushViewController(photoViewController, animated:true)
@@ -133,33 +135,47 @@ class CaptureViewController: UIViewController {
         }
     }
     
+    @objc func previewCaptureButtonTouchUpInside(sender: AnyObject) {
+        
+        // capture preview image from camera.
+        // you can also write code for result handling with response of notification handler 'cameraManagerReport' as above.
+        HJCameraManager.shared().capturePreviewImage({ (status:HJCameraManagerStatus, image:UIImage?) in
+            if let image = image {
+                let photoViewController = PhotoViewController()
+                photoViewController.image = image
+                self.navigationController?.pushViewController(photoViewController, animated:true)
+            }
+        })
+    }
+    
     func updateCameraStatus(enable:Bool) {
         
         var flashTitle:String?
-        switch( HJCameraManager.sharedManager().flashMode ) {
-        case HJCameraManagerFlashModeOff :
+        switch( HJCameraManager.shared().flashMode ) {
+        case .off :
             flashTitle = "Flash Off"
-        case HJCameraManagerFlashModeOn :
+        case .on :
             flashTitle = "Flash On"
-        case HJCameraManagerFlashModeAuto :
+        case .auto :
             flashTitle = "Flash Auto"
         default :
             flashTitle = "Flash ?"
         }
         var positionTitle:String?
-        switch( HJCameraManager.sharedManager().devicePosition ) {
-        case HJCameraManagerDevicePositionBack :
+        switch( HJCameraManager.shared().devicePosition ) {
+        case .back :
             positionTitle = "Back"
-        case HJCameraManagerDevicePositionFront :
+        case .front :
             positionTitle = "Front"
         default :
             positionTitle = "?"
         }
-        cameraView?.flashButton.enabled = enable
-        cameraView?.positionButton.enabled = enable
-        cameraView?.captureButton.enabled = enable
-        cameraView?.flashButton.setTitle(flashTitle, forState:UIControlState.Normal)
-        cameraView?.positionButton.setTitle(positionTitle, forState:UIControlState.Normal)
+        cameraView?.flashButton.isEnabled = enable
+        cameraView?.positionButton.isEnabled = enable
+        cameraView?.stillCaptureButton.isEnabled = enable
+        cameraView?.previewCaptureButton.isEnabled = enable
+        cameraView?.flashButton.setTitle(flashTitle, for:.normal)
+        cameraView?.positionButton.setTitle(positionTitle, for:.normal)
     }
 }
 
