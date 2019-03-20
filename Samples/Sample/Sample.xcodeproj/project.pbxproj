@@ -67,10 +67,10 @@
 				02ADF8A01C8808FE0082B16E /* CaptureViewController.swift */,
 				02ADF8B91C8828290082B16E /* PhotoViewController.swift */,
 				02ADF8B71C880D3D0082B16E /* CameraView.swift */,
-				02ADF8A51C8808FE0082B16E /* Assets.xcassets */,
 				02ADF8A71C8808FE0082B16E /* LaunchScreen.storyboard */,
 				02ADF8B51C880CF70082B16E /* CameraView.xib */,
 				02ADF8B11C8809670082B16E /* Sample-Bridging-Header.h */,
+				02ADF8A51C8808FE0082B16E /* Assets.xcassets */,
 				02ADF8AA1C8808FE0082B16E /* Info.plist */,
 			);
 			path = Sample;
@@ -117,7 +117,7 @@
 				TargetAttributes = {
 					02ADF89A1C8808FE0082B16E = {
 						CreatedOnToolsVersion = 7.2.1;
-						DevelopmentTeam = YN6AZK6A27;
+						ProvisioningStyle = Manual;
 					};
 				};
 			};
@@ -292,12 +292,14 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				DEVELOPMENT_TEAM = YN6AZK6A27;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = Sample/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.gmarket.playground.GmarketClient;
+				PRODUCT_BUNDLE_IDENTIFIER = com.p9soft.Sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Sample-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -310,12 +312,14 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				DEVELOPMENT_TEAM = YN6AZK6A27;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = Sample/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.gmarket.playground.GmarketClient;
+				PRODUCT_BUNDLE_IDENTIFIER = com.p9soft.Sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Sample-Bridging-Header.h";
 			};
 			name = Release;

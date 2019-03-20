@@ -8,12 +8,14 @@
 //  Licensed under the MIT license.
 
 import UIKit
+import Photos
 
-class PhotoViewController: UIViewController, UIScrollViewDelegate {
+class PhotoViewController: UIViewController {
     
     private let scrollView:UIScrollView = UIScrollView()
     private let imageView:UIImageView = UIImageView()
     private let label:UILabel = UILabel()
+    private let saveToCameraRollButton = UIButton(type: .custom)
     
     var image:UIImage? {
         didSet {
@@ -35,14 +37,6 @@ class PhotoViewController: UIViewController, UIScrollViewDelegate {
         automaticallyAdjustsScrollViewInsets = false;
         view.backgroundColor = .black
         
-        scrollView.delegate = self;
-        scrollView.minimumZoomScale = 1.0
-        scrollView.maximumZoomScale = 5.0
-        scrollView.backgroundColor = .clear
-        view.addSubview(scrollView)
-        
-        imageView.contentMode = .scaleAspectFill
-        
         label.font = UIFont.boldSystemFont(ofSize: 9)
         label.textColor = .white
         label.backgroundColor = UIColor.init(white: 0, alpha: 0.2)
@@ -50,9 +44,24 @@ class PhotoViewController: UIViewController, UIScrollViewDelegate {
         label.numberOfLines = 2
         label.textAlignment = .center
         
+        saveToCameraRollButton.backgroundColor = .darkGray
+        saveToCameraRollButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 12)
+        saveToCameraRollButton.setTitleColor(.white, for: .normal)
+        saveToCameraRollButton.setTitle("Save To CameraRoll", for: .normal)
+        
+        imageView.contentMode = .scaleAspectFill
+        
+        scrollView.delegate = self;
+        scrollView.minimumZoomScale = 1.0
+        scrollView.maximumZoomScale = 5.0
+        scrollView.backgroundColor = .clear
         scrollView.addSubview(imageView)
         
+        view.addSubview(scrollView)
         view.addSubview(label)
+        view.addSubview(saveToCameraRollButton)
+        
+        saveToCameraRollButton.addTarget(self, action:#selector(saveToCameraRollButtonTouchUpInside(sender:)), for:.touchUpInside)
     }
     
     override func didReceiveMemoryWarning() {
@@ -64,16 +73,6 @@ class PhotoViewController: UIViewController, UIScrollViewDelegate {
         super.viewDidLayoutSubviews()
         
         updateLayout()
-    }
-    
-    func viewForZoomingInScrollView(scrollView: UIScrollView) -> UIView? {
-        
-        return imageView
-    }
-    
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        
-        self.updateUpdateToCenterOfViewForScrollView(view: imageView, scrollView:scrollView)
     }
     
     private func updateUpdateToCenterOfViewForScrollView(view:UIView, scrollView:UIScrollView) {
@@ -112,6 +111,39 @@ class PhotoViewController: UIViewController, UIScrollViewDelegate {
             labelFrame.origin.x = (frame.size.width - labelFrame.size.width)*0.5
             labelFrame.origin.y = 40
             label.frame = labelFrame
+            var buttonFrame:CGRect = .zero
+            buttonFrame.size.width = 140
+            buttonFrame.size.height = 30
+            buttonFrame.origin.x = (frame.size.width - buttonFrame.size.width)*0.5
+            buttonFrame.origin.y = frame.size.height - 20 - buttonFrame.size.height
+            saveToCameraRollButton.frame = buttonFrame
         }
+    }
+    
+    @objc func saveToCameraRollButtonTouchUpInside(sender: AnyObject) {
+        
+        guard let image = image else {
+            return
+        }
+        PHPhotoLibrary.shared().performChanges({
+            PHAssetChangeRequest.creationRequestForAsset(from: image)
+        }, completionHandler: { (success, error) in
+            let alert = UIAlertController(title: nil, message: (success == false ? "Save Failed" : "Save OK"), preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+        })
+    }
+}
+
+extension PhotoViewController: UIScrollViewDelegate {
+    
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        
+        return imageView
+    }
+    
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        
+        self.updateUpdateToCenterOfViewForScrollView(view: imageView, scrollView:scrollView)
     }
 }
