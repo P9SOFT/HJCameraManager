@@ -41,7 +41,7 @@ HJCameraManager.shared().captureStillImage { (status:HJCameraManagerStatus, imag
 }
 ```
 
-Another way to take a picture.
+Another way to take a picture. It provide smaller image then captureStillImage but no shutter sound.
 
 ```swift
 HJCameraManager.shared().capturePreviewImage { (status:HJCameraManagerStatus, image:UIImage?, fileUrl:URL?) in
@@ -68,6 +68,7 @@ HJCameraManager.shared().stopRecordingVideo({ (status, image, fileUrl) in
 ```
 
 Utility functions help you to reprocess image or video.
+You can resize by given width, height with keep image rate, resize the you want or crop center square and so on for captured image or video by utility function.
 
 ```swift
 HJCameraManager.shared().captureStillImage { (status:HJCameraManagerStatus, image:UIImage?, fileUrl:URL?) in

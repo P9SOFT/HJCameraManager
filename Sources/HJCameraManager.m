@@ -9,7 +9,7 @@
 
 #import "HJCameraManager.h"
 
-@interface HJCameraManager () <AVCaptureVideoDataOutputSampleBufferDelegate/*, AVCapturePhotoCaptureDelegate*/, AVCaptureFileOutputRecordingDelegate>
+@interface HJCameraManager () <AVCaptureVideoDataOutputSampleBufferDelegate, AVCapturePhotoCaptureDelegate, AVCaptureFileOutputRecordingDelegate>
 {
     HJCameraManagerFlashMode            _flashMode;
     HJCameraManagerTorchMode            _torchMode;
@@ -24,16 +24,18 @@
 @property (nonatomic, strong) AVCaptureDeviceInput *captureDeviceInput;
 @property (nonatomic, strong) AVCaptureDeviceInput *audioDeviceInput;
 @property (nonatomic, strong) AVCaptureStillImageOutput *stillImageOutput;
-//@property (nonatomic, strong) AVCapturePhotoOutput *photoOutput;
+@property (nonatomic, strong) AVCapturePhotoOutput *photoOutput;
 @property (nonatomic, strong) AVCaptureVideoDataOutput *videoOutput;
 @property (nonatomic, strong) AVCaptureMovieFileOutput *movieFileOutput;
 @property (nonatomic, strong) dispatch_queue_t videoOutputSerialQueue;
 @property (nonatomic, strong) NSMutableArray *capturePreviewCompletionQueue;
-@property (nonatomic, strong) HJCameraManagerCompletion movieFileSaveToPhotosAlbumCompletion;
+@property (nonatomic, strong) NSMutableArray *moveFileSaveToPhotosAlbumCompletionQueue;
+@property (nonatomic, strong) NSMutableArray *photoCaptureCompletionQueue;
 
 - (void)reset;
 - (void)postNotifyWithStatus:(HJCameraManagerStatus)status image:(UIImage *)image fileUrl:(NSURL *)fileUrl completion:(HJCameraManagerCompletion)completion;
 - (AVCaptureConnection *)videoConnectionOfCaptureOutput:(AVCaptureOutput *)output;
+- (BOOL)updateVideoOrientationForCaptureOutput:(AVCaptureOutput *)output;
 - (AVCaptureDevice *)captureDeviceForPosition:(AVCaptureDevicePosition)position;
 - (UIImage *)imageFromSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 + (HJCameraManagerVideoOrientation)orientationFor:(CGAffineTransform)preferredTransform;
@@ -69,6 +71,12 @@
         _previewContentMode = HJCameraManagerPreviewContentModeResizeAspect;
         _videoOutputSerialQueue = dispatch_queue_create("p9soft.manager.hjcamera-videoOutput", DISPATCH_QUEUE_SERIAL);
         if( (_capturePreviewCompletionQueue = [NSMutableArray new]) == nil ) {
+            return nil;
+        }
+        if( (_moveFileSaveToPhotosAlbumCompletionQueue = [NSMutableArray new]) == nil ) {
+            return nil;
+        }
+        if( (_photoCaptureCompletionQueue = [NSMutableArray new]) == nil ) {
             return nil;
         }
     }
@@ -174,15 +182,15 @@
         }
         [_session addInput:_captureDeviceInput];
         
-//        if (@available(iOS 10.0, *)) {
-//            _photoOutput = [[AVCapturePhotoOutput alloc] init];
-//            if( (_photoOutput == nil) || ([_session canAddOutput:_photoOutput] == NO) ) {
-//                [self reset];
-//                [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
-//                return NO;
-//            }
-//            [_session addOutput:_photoOutput];
-//        } else {
+        if (@available(iOS 10.0, *)) {
+            _photoOutput = [[AVCapturePhotoOutput alloc] init];
+            if( (_photoOutput == nil) || ([_session canAddOutput:_photoOutput] == NO) ) {
+                [self reset];
+                [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
+                return NO;
+            }
+            [_session addOutput:_photoOutput];
+        } else {
             if( (_stillImageOutput = [[AVCaptureStillImageOutput alloc] init]) == nil ) {
                 [self reset];
                 [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
@@ -195,7 +203,7 @@
                 return NO;
             }
             [_session addOutput:_stillImageOutput];
-//        }
+        }
         
         if( enableVideo == NO ) {
             if( (_videoOutput = [[AVCaptureVideoDataOutput alloc] init]) != nil ) {
@@ -326,53 +334,33 @@
 
 - (void)captureStillImage:(HJCameraManagerCompletion _Nullable)completion
 {
-    HJCameraManagerVideoOrientation orientation = HJCameraManagerVideoOrientationPortrait;
-    switch( self.videoOrientation ) {
-        case HJCameraManagerVideoOrientationLandscapeLeft :
-            orientation = HJCameraManagerVideoOrientationLandscapeRight;
-            break;
-        case HJCameraManagerVideoOrientationLandscapeRight :
-            orientation = HJCameraManagerVideoOrientationLandscapeLeft;
-            break;
-        default :
-            orientation = self.videoOrientation;
-            break;
-    }
-    
     @synchronized (self) {
-//        if (@available(iOS 10.0, *)) {
-//            if( (_isRunning == NO) || (_photoOutput == nil) ) {
-//                [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
-//                return;
-//            }
-//            AVCapturePhotoSettings *settings = [[AVCapturePhotoSettings alloc] init];
-//            if( settings.availablePreviewPhotoPixelFormatTypes.count > 0 ) {
-//                settings.previewPhotoFormat = @{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
-//            }
-//            [_photoOutput capturePhotoWithSettings:settings delegate:self];
-//        } else {
+        if (@available(iOS 10.0, *)) {
+            if( (_isRunning == NO) || (_photoOutput == nil) ) {
+                [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+                return;
+            }
+            AVCapturePhotoSettings *settings = [[AVCapturePhotoSettings alloc] init];
+            if( settings.availablePreviewPhotoPixelFormatTypes.count > 0 ) {
+                settings.previewPhotoFormat = @{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+            }
+            if( completion != nil ) {
+                [_photoCaptureCompletionQueue addObject:completion];
+            }
+            if( [self updateVideoOrientationForCaptureOutput:_photoOutput] == NO ) {
+                [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:nil fileUrl:nil completion:completion];
+                return;
+            }
+            [_photoOutput capturePhotoWithSettings:settings delegate:self];
+        } else {
             if( (_isRunning == NO) || (_stillImageOutput == nil) ) {
                 [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
                 return;
             }
             AVCaptureConnection *connection = [self videoConnectionOfCaptureOutput:_stillImageOutput];
-            if( connection == nil ) {
+            if( (connection == nil) || ([self updateVideoOrientationForCaptureOutput:_stillImageOutput] == NO) ) {
                 [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:nil fileUrl:nil completion:completion];
                 return;
-            }
-            switch( orientation ) {
-                case HJCameraManagerVideoOrientationLandscapeLeft :
-                    connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
-                    break;
-                case HJCameraManagerVideoOrientationLandscapeRight :
-                    connection.videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-                    break;
-                case HJCameraManagerVideoOrientationPortraitUpsideDown :
-                    connection.videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
-                    break;
-                default :
-                    connection.videoOrientation = AVCaptureVideoOrientationPortrait;
-                    break;
             }
             [_stillImageOutput captureStillImageAsynchronouslyFromConnection: connection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
                 if( imageDataSampleBuffer == NULL ) {
@@ -390,7 +378,7 @@
                     [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
                 }
             }];
-//        }
+        }
     }
 }
 
@@ -417,26 +405,10 @@
             [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordFailed image:nil fileUrl:fileUrl completion:nil];
             return NO;
         }
-        AVCaptureConnection *connection = [self videoConnectionOfCaptureOutput:_movieFileOutput];
-        if( connection == nil ) {
+        if( [self updateVideoOrientationForCaptureOutput:_movieFileOutput] == NO ) {
             [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordFailed image:nil fileUrl:fileUrl completion:nil];
             return NO;
         }
-        switch( self.videoOrientation ) {
-            case HJCameraManagerVideoOrientationLandscapeLeft :
-                connection.videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-                break;
-            case HJCameraManagerVideoOrientationLandscapeRight :
-                connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
-                break;
-            case HJCameraManagerVideoOrientationPortraitUpsideDown :
-                connection.videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
-                break;
-            default :
-                connection.videoOrientation = AVCaptureVideoOrientationPortrait;
-                break;
-        }
-        _movieFileSaveToPhotosAlbumCompletion = nil;
         [_movieFileOutput startRecordingToOutputFileURL:fileUrl recordingDelegate:self];
     }
     
@@ -450,7 +422,7 @@
             [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordFailed image:nil fileUrl:_movieFileOutput.outputFileURL completion:completion];
             return;
         }
-        _movieFileSaveToPhotosAlbumCompletion = completion;
+        [_moveFileSaveToPhotosAlbumCompletionQueue addObject:completion];
         [_movieFileOutput stopRecording];
     }
 }
@@ -566,7 +538,7 @@
     }
     _captureDeviceInput = nil;
     _stillImageOutput = nil;
-//    _photoOutput = nil;
+    _photoOutput = nil;
     _videoOutput = nil;
     _movieFileOutput = nil;
     _audioDeviceInput = nil;
@@ -610,6 +582,32 @@
     }
     
     return foundConnection;
+}
+
+- (BOOL)updateVideoOrientationForCaptureOutput:(AVCaptureOutput *)output
+{
+    if( output == nil ) {
+        return NO;
+    }
+    AVCaptureConnection *connection = [self videoConnectionOfCaptureOutput:output];
+    if( connection == nil ) {
+        return NO;
+    }
+    switch( self.videoOrientation ) {
+        case HJCameraManagerVideoOrientationLandscapeLeft :
+            connection.videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+            break;
+        case HJCameraManagerVideoOrientationLandscapeRight :
+            connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
+            break;
+        case HJCameraManagerVideoOrientationPortraitUpsideDown :
+            connection.videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+            break;
+        default :
+            connection.videoOrientation = AVCaptureVideoOrientationPortrait;
+            break;
+    }
+    return YES;
 }
 
 - (AVCaptureDevice *)captureDeviceForPosition:(AVCaptureDevicePosition)position;
@@ -1290,10 +1288,6 @@
 
 - (void)captureOutput:(AVCaptureOutput *)output didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
 {
-    if( sampleBuffer == NULL ) {
-        return;
-    }
-    
     BOOL notify = _notifyPreviewImage;
     NSArray *pair = nil;
     
@@ -1323,7 +1317,10 @@
         if( pair.count > 1 ) {
             completion = (HJCameraManagerCompletion)pair[1];
         }
-        UIImage *image = [HJCameraManager orientationFixImage:[self imageFromSampleBuffer:sampleBuffer] videoOrientation:orientation];
+        UIImage *image = nil;
+        if( sampleBuffer != NULL ) {
+            image = [HJCameraManager orientationFixImage:[self imageFromSampleBuffer:sampleBuffer] videoOrientation:orientation];
+        }
         if( (image != nil) && (notify == YES) ) {
             [self postNotifyWithStatus:HJCameraManagerStatusPreviewImageCaptured image:image fileUrl:nil completion:nil];
         }
@@ -1332,16 +1329,56 @@
 }
 
 //// MARK: — AVCapturePhotoCaptureDelegate
-//
-//- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhotoSampleBuffer:(nullable CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(nullable CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(nullable AVCaptureBracketedStillImageSettings *)bracketSettings error:(nullable NSError *)error
-//{
-//    ;
-//}
-//
-//- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(nullable NSError *)error API_AVAILABLE(ios(11.0))
-//{
-//    ;
-//}
+
+- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhotoSampleBuffer:(nullable CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(nullable CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(nullable AVCaptureBracketedStillImageSettings *)bracketSettings error:(nullable NSError *)error
+{
+    @synchronized (self) {
+        HJCameraManagerCompletion completion = nil;
+        if( _photoCaptureCompletionQueue.count > 0 ) {
+            completion = [_photoCaptureCompletionQueue firstObject];
+            [_photoCaptureCompletionQueue removeObjectAtIndex:0];
+        }
+        if( photoSampleBuffer == NULL ) {
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+            return;
+        }
+        UIImage *image = nil;
+        NSData *data = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:photoSampleBuffer];
+        if( data != nil ) {
+            image = [[UIImage alloc] initWithData:data];
+        }
+        if( image != nil ) {
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:image fileUrl:nil completion:completion];
+        } else {
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+        }
+    }
+}
+
+- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(nullable NSError *)error API_AVAILABLE(ios(11.0))
+{
+    @synchronized (self) {
+        HJCameraManagerCompletion completion = nil;
+        if( _photoCaptureCompletionQueue.count > 0 ) {
+            completion = [_photoCaptureCompletionQueue firstObject];
+            [_photoCaptureCompletionQueue removeObjectAtIndex:0];
+        }
+        if( photo == nil ) {
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+            return;
+        }
+        UIImage *image = nil;
+        NSData *data = photo.fileDataRepresentation;
+        if( data != nil ) {
+            image = [[UIImage alloc] initWithData:data];
+        }
+        if( image != nil ) {
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:image fileUrl:nil completion:completion];
+        } else {
+            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+        }
+    }
+}
 
 // MARK: — AVCaptureFileOutputRecordingDelegate
 
@@ -1357,8 +1394,12 @@
         return;
     }
     @synchronized (self) {
-        [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordEnded image:nil fileUrl:outputFileURL completion:_movieFileSaveToPhotosAlbumCompletion];
-        _movieFileSaveToPhotosAlbumCompletion = nil;
+        HJCameraManagerCompletion completion = nil;
+        if( _moveFileSaveToPhotosAlbumCompletionQueue.count > 0 ) {
+            completion = [_moveFileSaveToPhotosAlbumCompletionQueue firstObject];
+            [_moveFileSaveToPhotosAlbumCompletionQueue removeObjectAtIndex:0];
+        }
+        [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordEnded image:nil fileUrl:outputFileURL completion:completion];
     }
 }
 
