@@ -293,6 +293,7 @@ class CaptureViewController: UIViewController {
         default :
             flashTitle = "Flash ?"
         }
+        
         var positionTitle:String?
         switch( HJCameraManager.shared().devicePosition ) {
         case .back :

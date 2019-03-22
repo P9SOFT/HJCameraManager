@@ -60,7 +60,7 @@
 @dynamic previewContentMode;
 @dynamic isVideoRecording;
 
-- (id)init
+- (instancetype)init
 {
     if( (self = [super init]) != nil ) {
         _isRunning = NO;
@@ -614,7 +614,7 @@
 {
     NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
     for( AVCaptureDevice *device in devices ) {
-        if( [device position] == position ) {
+        if( device.position == position ) {
             return device;
         }
     }
@@ -1102,7 +1102,7 @@
         if( ([captureDevice hasFlash] == YES) && ([captureDevice isFlashModeSupported:mode] == YES) ) {
             NSError *error = nil;
             if( [captureDevice lockForConfiguration:&error] == YES ) {
-                [captureDevice setFlashMode:mode];
+                captureDevice.flashMode = mode;
                 [captureDevice unlockForConfiguration];
             }
         }
