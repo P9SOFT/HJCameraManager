@@ -12,7 +12,8 @@
 
 #define     HJCameraManagerNotification                     @"HJCameraManagerNotification"
 #define     HJCameraManagerNotifyParameterKeyStatus         @"HJCameraManagerNotifyParameterKeyStatus"
-#define     HJCameraManagerNotifyParameterKeyStillImage     @"HJCameraManagerNotifyParameterKeyStillImage"
+#define     HJCameraManagerNotifyParameterKeyImage          @"HJCameraManagerNotifyParameterKeyImage"
+#define     HJCameraManagerNotifyParameterKeyFileUrl        @"HJCameraManagerNotifyParameterKeyFileUrl"
 
 typedef NS_ENUM(NSInteger, HJCameraManagerStatus)
 {
@@ -21,16 +22,29 @@ typedef NS_ENUM(NSInteger, HJCameraManagerStatus)
     HJCameraManagerStatusRunning,
     HJCameraManagerStatusStillImageCaptured,
     HJCameraManagerStatusStillImageCaptureFailed,
-    HJCameraManagerStatusAccessDenied,
-    HJCameraManagerStatusInternalError
+    HJCameraManagerStatusPreviewImageCaptured,
+    HJCameraManagerStatusVideoRecordBegan,
+    HJCameraManagerStatusVideoRecordEnded,
+    HJCameraManagerStatusVideoRecordFailed,
+    HJCameraManagerStatusMediaProcessingDone,
+    HJCameraManagerStatusMediaProcessingFailed,
+    HJCameraManagerStatusStartFailedWithInternalError,
+    HJCameraManagerStatusStartFailedWithAccessDenied,
+    kCountOfHJCameraManagerStatus
 };
 
 typedef NS_ENUM(NSInteger, HJCameraManagerFlashMode)
 {
-    HJCameraManagerFlashModeUnspecified,
     HJCameraManagerFlashModeOff,
     HJCameraManagerFlashModeOn,
     HJCameraManagerFlashModeAuto
+};
+
+typedef NS_ENUM(NSInteger, HJCameraManagerTorchMode)
+{
+    HJCameraManagerTorchModeOff,
+    HJCameraManagerTorchModeOn,
+    HJCameraManagerTorchModeAuto
 };
 
 typedef NS_ENUM(NSInteger, HJCameraManagerDevicePosition)
@@ -40,20 +54,60 @@ typedef NS_ENUM(NSInteger, HJCameraManagerDevicePosition)
     HJCameraManagerDevicePositionFront
 };
 
-typedef void(^HJCameraManagerCompletion)(HJCameraManagerStatus, UIImage * _Nullable);
+typedef NS_ENUM(NSInteger, HJCameraManagerVideoOrientation)
+{
+    HJCameraManagerVideoOrientationPortrait,
+    HJCameraManagerVideoOrientationPortraitUpsideDown,
+    HJCameraManagerVideoOrientationLandscapeRight,
+    HJCameraManagerVideoOrientationLandscapeLeft
+};
+
+typedef NS_ENUM(NSInteger, HJCameraManagerPreviewContentMode)
+{
+    HJCameraManagerPreviewContentModeResizeAspect,
+    HJCameraManagerPreviewContentModeResizeAspectFill,
+    HJCameraManagerPreviewContentModeResize
+};
+
+typedef NS_ENUM(NSInteger, HJCameraManagerImageProcessingType)
+{
+    HJCameraManagerImageProcessingTypePass,
+    HJCameraManagerImageProcessingTypeResizeByGivenWidth,
+    HJCameraManagerImageProcessingTypeResizeByGivenHeight,
+    HJCameraManagerImageProcessingTypeResizeByGivenSize,
+    HJCameraManagerImageProcessingTypeResizeByGivenRate,
+    HJCameraManagerImageProcessingTypeCropCenterSquare,
+    HJCameraManagerImageProcessingTypeCropCenterSquareAndResizeByGivenWidth
+};
+
+typedef void(^HJCameraManagerCompletion)(HJCameraManagerStatus, UIImage * _Nullable, NSURL * _Nullable);
 
 @interface HJCameraManager : NSObject
 
-+ (HJCameraManager * _Nonnull)defaultHJCameraManager;
++ (HJCameraManager * _Nonnull)sharedManager;
 
-- (BOOL)startWithPreviewView:(UIView * _Nullable)previewView preset:(NSString * _Nullable)preset;
+- (BOOL)startWithPreviewViewForPhoto:(UIView * _Nullable)previewView;
+- (BOOL)startWithPreviewViewForVideo:(UIView * _Nullable)previewView enableAudio:(BOOL)enableAudio;
+- (BOOL)startWithPreviewView:(UIView * _Nullable)previewView preset:(NSString * _Nullable)preset enableVideo:(BOOL)enableVideo enableAudio:(BOOL)enableAudio;
 - (void)stop;
 - (BOOL)toggleCamera;
-- (BOOL)captureStillImage:(HJCameraManagerCompletion _Nullable)completion;
+- (void)captureStillImage:(HJCameraManagerCompletion _Nullable)completion;
+- (void)capturePreviewImage:(HJCameraManagerCompletion _Nullable)completion;
+- (BOOL)recordVideoToFileUrl:(NSURL * _Nullable)fileUrl;
+- (void)stopRecordingVideo:(HJCameraManagerCompletion _Nullable)completion;
+- (void)setVideoOrientationByDeviceOrietation:(UIDeviceOrientation)deviceOrientation;
 
-@property (nonatomic, readonly) HJCameraManagerStatus status;
++ (void)processingImage:(UIImage * _Nullable)image type:(HJCameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize completion:(HJCameraManagerCompletion _Nullable)completion;
++ (void)processingVideo:(NSURL * _Nullable)fileUrl toOutputFileUrl:(NSURL * _Nullable)outputFileUrl type:(HJCameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize preset:(NSString * _Nullable)preset completion:(HJCameraManagerCompletion _Nullable)completion;
+
+@property (nonatomic, readonly) BOOL isRunning;
 @property (nonatomic, readonly) NSInteger countOfCamera;
 @property (nonatomic, assign) HJCameraManagerFlashMode flashMode;
+@property (nonatomic, assign) HJCameraManagerTorchMode torchMode;
 @property (nonatomic, assign) HJCameraManagerDevicePosition devicePosition;
+@property (nonatomic, assign) HJCameraManagerVideoOrientation videoOrientation;
+@property (nonatomic, assign) HJCameraManagerPreviewContentMode previewContentMode;
+@property (nonatomic, assign) BOOL notifyPreviewImage;
+@property (nonatomic, readonly) BOOL isVideoRecording;
 
 @end

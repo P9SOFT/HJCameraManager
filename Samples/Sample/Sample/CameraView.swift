@@ -11,9 +11,13 @@ import UIKit
 
 class CameraView: UIView {
     
-    @IBOutlet var frameView: UIView!
-    @IBOutlet var flashButton: UIButton!
-    @IBOutlet var positionButton: UIButton!
-    @IBOutlet var captureButton: UIButton!
+    @IBOutlet weak var photoButton: UIButton!
+    @IBOutlet weak var videoButton: UIButton!
+    @IBOutlet weak var frameView: UIView!
+    @IBOutlet weak var flashButton: UIButton!
+    @IBOutlet weak var positionButton: UIButton!
+    @IBOutlet weak var contentModeButton: UIButton!
+    @IBOutlet weak var stillCaptureButton: UIButton!
+    @IBOutlet weak var previewCaptureButton: UIButton!
     
 }

@@ -15,7 +15,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIGestureRecognizerDelega
     var window: UIWindow?
     var navigationController:UINavigationController?
     
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         
         navigationController = UINavigationController(rootViewController:CaptureViewController())
         navigationController?.interactivePopGestureRecognizer?.delegate = self
