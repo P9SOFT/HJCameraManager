@@ -24,7 +24,7 @@
 @property (nonatomic, strong) AVCaptureDeviceInput *captureDeviceInput;
 @property (nonatomic, strong) AVCaptureDeviceInput *audioDeviceInput;
 @property (nonatomic, strong) AVCaptureStillImageOutput *stillImageOutput;
-@property (nonatomic, strong) AVCapturePhotoOutput *photoOutput;
+@property (nonatomic, strong) AVCapturePhotoOutput *photoOutput API_AVAILABLE(ios(10));
 @property (nonatomic, strong) AVCaptureVideoDataOutput *videoOutput;
 @property (nonatomic, strong) AVCaptureMovieFileOutput *movieFileOutput;
 @property (nonatomic, strong) dispatch_queue_t videoOutputSerialQueue;
@@ -1330,7 +1330,7 @@
 
 //// MARK: — AVCapturePhotoCaptureDelegate
 
-- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhotoSampleBuffer:(nullable CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(nullable CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(nullable AVCaptureBracketedStillImageSettings *)bracketSettings error:(nullable NSError *)error
+- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhotoSampleBuffer:(nullable CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(nullable CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(nullable AVCaptureBracketedStillImageSettings *)bracketSettings error:(nullable NSError *)error API_AVAILABLE(ios(10))
 {
     @synchronized (self) {
         HJCameraManagerCompletion completion = nil;
