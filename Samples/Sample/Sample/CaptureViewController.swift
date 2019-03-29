@@ -26,7 +26,7 @@ class CaptureViewController: UIViewController {
         self.view.addSubview(cameraView)
         
         NotificationCenter.default.addObserver(self, selector: #selector(deviceOrientationDidChangeHandler), name: UIDevice.orientationDidChangeNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector:#selector(cameraManagerReport), name:NSNotification.Name(rawValue: HJCameraManagerNotification), object:nil)
+        NotificationCenter.default.addObserver(self, selector:#selector(cameraManagerReport), name:NSNotification.Name(rawValue: P9CameraManagerNotification), object:nil)
         
         cameraView.photoButton.addTarget(self, action:#selector(photoButtonTouchUpInside(sender:)), for:.touchUpInside)
         cameraView.videoButton.addTarget(self, action:#selector(videoButtonTouchUpInside(sender:)), for:.touchUpInside)
@@ -62,7 +62,7 @@ class CaptureViewController: UIViewController {
         super.viewDidAppear(animated)
         
         if( UIDevice.current.orientation != .portraitUpsideDown ) {
-            HJCameraManager.shared().setVideoOrientationByDeviceOrietation(UIDevice.current.orientation)
+            P9CameraManager.shared().setVideoOrientationByDeviceOrietation(UIDevice.current.orientation)
         }
         
         // start camera when view did appear
@@ -74,13 +74,13 @@ class CaptureViewController: UIViewController {
         super.viewDidDisappear(animated)
         
         // stop camera when view did disappear
-        HJCameraManager.shared().stop()
+        P9CameraManager.shared().stop()
     }
     
     @objc func deviceOrientationDidChangeHandler(notification:NSNotification) {
         
         if( UIDevice.current.orientation != .portraitUpsideDown ) {
-            HJCameraManager.shared().setVideoOrientationByDeviceOrietation(UIDevice.current.orientation)
+            P9CameraManager.shared().setVideoOrientationByDeviceOrietation(UIDevice.current.orientation)
         }
     }
     
@@ -115,8 +115,8 @@ class CaptureViewController: UIViewController {
     
     @objc func flashButtonTouchUpInside(sender: AnyObject) {
         
-        let currentFlashMode = HJCameraManager.shared().flashMode
-        var nextFlashMode:HJCameraManagerFlashMode = .off
+        let currentFlashMode = P9CameraManager.shared().flashMode
+        var nextFlashMode:P9CameraManagerFlashMode = .off
 
         switch( currentFlashMode ) {
         case .off :
@@ -128,15 +128,15 @@ class CaptureViewController: UIViewController {
         }
         if currentFlashMode != nextFlashMode {
             // change flash mode of camera
-            HJCameraManager.shared().flashMode = nextFlashMode
+            P9CameraManager.shared().flashMode = nextFlashMode
             updateCameraStatus(enable: true)
         }
     }
     
     @objc func positionButtonTouchUpInside(sender: AnyObject) {
         
-        let currentPosition = HJCameraManager.shared().devicePosition
-        var nextPosition:HJCameraManagerDevicePosition = .back
+        let currentPosition = P9CameraManager.shared().devicePosition
+        var nextPosition:P9CameraManagerDevicePosition = .back
         
         switch( currentPosition ) {
         case .back :
@@ -146,15 +146,15 @@ class CaptureViewController: UIViewController {
         }
         if currentPosition != nextPosition {
             // change device position of camera
-            HJCameraManager.shared().devicePosition = nextPosition
+            P9CameraManager.shared().devicePosition = nextPosition
             updateCameraStatus(enable: true)
         }
     }
     
     @objc func contentModeButtonTouchUpInside(sender: AnyObject) {
         
-        let currentContentMode = HJCameraManager.shared().previewContentMode
-        var nextContentMode:HJCameraManagerPreviewContentMode = .resizeAspect
+        let currentContentMode = P9CameraManager.shared().previewContentMode
+        var nextContentMode:P9CameraManagerPreviewContentMode = .resizeAspect
         
         switch( currentContentMode ) {
         case .resizeAspect :
@@ -166,7 +166,7 @@ class CaptureViewController: UIViewController {
         }
         if currentContentMode != nextContentMode {
             // change preview content mode
-            HJCameraManager.shared().previewContentMode = nextContentMode
+            P9CameraManager.shared().previewContentMode = nextContentMode
             updateCameraStatus(enable: true)
         }
     }
@@ -176,10 +176,10 @@ class CaptureViewController: UIViewController {
         if isVideoMode == false {
             // capture still image from camera.
             // you can also write code for result handling with response of notification handler 'cameraManagerReport' as above.
-            HJCameraManager.shared().captureStillImage { (status:HJCameraManagerStatus, image:UIImage?, fileUrl:URL?) in
+            P9CameraManager.shared().captureStillImage { (status:P9CameraManagerStatus, image:UIImage?, fileUrl:URL?) in
                 if let image = image {
-                    var imageProcessingType:HJCameraManagerImageProcessingType = .pass
-                    switch HJCameraManager.shared().previewContentMode {
+                    var imageProcessingType:P9CameraManagerImageProcessingType = .pass
+                    switch P9CameraManager.shared().previewContentMode {
                     case .resizeAspectFill :
                         imageProcessingType = .cropCenterSquare
                     case .resize :
@@ -187,7 +187,7 @@ class CaptureViewController: UIViewController {
                     default :
                         break;
                     }
-                    HJCameraManager.processingImage(image, type: imageProcessingType, referenceSize: self.cameraView.frameView.frame.size, completion: { (status, image, fileUrl) in
+                    P9CameraManager.processingImage(image, type: imageProcessingType, referenceSize: self.cameraView.frameView.frame.size, completion: { (status, image, fileUrl) in
                         if let image = image {
                             let photoViewController = PhotoViewController()
                             photoViewController.image = image
@@ -199,19 +199,19 @@ class CaptureViewController: UIViewController {
         } else {
             // record video or stop
             // you can also write code for result handling with response of notification handler 'cameraManagerReport' as above.
-            if HJCameraManager.shared().isVideoRecording == false {
+            if P9CameraManager.shared().isVideoRecording == false {
                 cameraView.stillCaptureButton.setTitle("Stop", for: .normal)
                 let saveVideoPath = "\(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])/output.mov"
                 let url = URL(fileURLWithPath: saveVideoPath)
-                HJCameraManager.shared().recordVideo(toFileUrl: url)
+                P9CameraManager.shared().recordVideo(toFileUrl: url)
             } else {
                 cameraView.stillCaptureButton.setTitle("Record", for: .normal)
                 cameraView.stillCaptureButton.isEnabled = false
-                HJCameraManager.shared().stopRecordingVideo({ (status, image, fileUrl) in
+                P9CameraManager.shared().stopRecordingVideo({ (status, image, fileUrl) in
                     self.cameraView.stillCaptureButton.isEnabled = true
                     if let fileUrl = fileUrl {
-                        var imageProcessingType:HJCameraManagerImageProcessingType?
-                        switch HJCameraManager.shared().previewContentMode {
+                        var imageProcessingType:P9CameraManagerImageProcessingType?
+                        switch P9CameraManager.shared().previewContentMode {
                         case .resizeAspectFill :
                             imageProcessingType = .cropCenterSquare
                         case .resize :
@@ -223,7 +223,7 @@ class CaptureViewController: UIViewController {
                             self.cameraView.stillCaptureButton.isEnabled = false
                             let saveVideoPath = "\(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])/output2.mov"
                             let outputFileUrl = URL(fileURLWithPath: saveVideoPath)
-                            HJCameraManager.processingVideo(fileUrl, toOutputFileUrl: outputFileUrl, type: type, referenceSize: self.cameraView.frameView.frame.size, preset: AVAssetExportPresetHighestQuality, completion: { (status, image, fileUrl) in
+                            P9CameraManager.processingVideo(fileUrl, toOutputFileUrl: outputFileUrl, type: type, referenceSize: self.cameraView.frameView.frame.size, preset: AVAssetExportPresetHighestQuality, completion: { (status, image, fileUrl) in
                                 self.cameraView.stillCaptureButton.isEnabled = true
                                 if let fileUrl = fileUrl {
                                     self.handleRecodingResult(fileUrl: fileUrl)
@@ -242,10 +242,10 @@ class CaptureViewController: UIViewController {
         
         // capture preview image from camera.
         // you can also write code for result handling with response of notification handler 'cameraManagerReport' as above.
-        HJCameraManager.shared().capturePreviewImage { (status:HJCameraManagerStatus, image:UIImage?, fileUrl:URL?) in
+        P9CameraManager.shared().capturePreviewImage { (status:P9CameraManagerStatus, image:UIImage?, fileUrl:URL?) in
             if let image = image {
-                var imageProcessingType:HJCameraManagerImageProcessingType = .pass
-                switch HJCameraManager.shared().previewContentMode {
+                var imageProcessingType:P9CameraManagerImageProcessingType = .pass
+                switch P9CameraManager.shared().previewContentMode {
                 case .resizeAspectFill :
                     imageProcessingType = .cropCenterSquare
                 case .resize :
@@ -253,7 +253,7 @@ class CaptureViewController: UIViewController {
                 default :
                     break;
                 }
-                HJCameraManager.processingImage(image, type: imageProcessingType, referenceSize: self.cameraView.frameView.frame.size, completion: { (status, image, fileUrl) in
+                P9CameraManager.processingImage(image, type: imageProcessingType, referenceSize: self.cameraView.frameView.frame.size, completion: { (status, image, fileUrl) in
                     if let image = image {
                         let photoViewController = PhotoViewController()
                         photoViewController.image = image
@@ -266,14 +266,14 @@ class CaptureViewController: UIViewController {
     
     private func stanbyCameraByCurrentMode() {
         
-        if HJCameraManager.shared().isRunning == true {
-            HJCameraManager.shared().stop()
+        if P9CameraManager.shared().isRunning == true {
+            P9CameraManager.shared().stop()
         }
         var cameraStatus = false
         if isVideoMode == false {
-            cameraStatus = HJCameraManager.shared().startWithPreviewView(forPhoto: cameraView.frameView)
+            cameraStatus = P9CameraManager.shared().startWithPreviewView(forPhoto: cameraView.frameView)
         } else {
-            cameraStatus = HJCameraManager.shared().startWithPreviewView(forVideo: cameraView.frameView, enableAudio: false)
+            cameraStatus = P9CameraManager.shared().startWithPreviewView(forVideo: cameraView.frameView, enableAudio: false)
         }
         updateCameraStatus(enable: cameraStatus)
     }
@@ -283,7 +283,7 @@ class CaptureViewController: UIViewController {
         cameraView.photoButton.setTitle((isVideoMode == false ? "🔘 Photo" : "⚪️ Photo"), for: .normal)
         cameraView.videoButton.setTitle((isVideoMode == false ? "⚪️ Video" : "🔘 Video"), for: .normal)
         var flashTitle:String?
-        switch( HJCameraManager.shared().flashMode ) {
+        switch( P9CameraManager.shared().flashMode ) {
         case .off :
             flashTitle = "Flash Off"
         case .on :
@@ -295,7 +295,7 @@ class CaptureViewController: UIViewController {
         }
         
         var positionTitle:String?
-        switch( HJCameraManager.shared().devicePosition ) {
+        switch( P9CameraManager.shared().devicePosition ) {
         case .back :
             positionTitle = "Back"
         case .front :
@@ -304,7 +304,7 @@ class CaptureViewController: UIViewController {
             positionTitle = "Position ?"
         }
         var contentModeTitle:String?
-        switch( HJCameraManager.shared().previewContentMode ) {
+        switch( P9CameraManager.shared().previewContentMode ) {
         case .resizeAspect :
             contentModeTitle = "Aspect"
         case .resizeAspectFill :
@@ -317,7 +317,7 @@ class CaptureViewController: UIViewController {
         if isVideoMode == false {
             cameraView.stillCaptureButton.setTitle("Still Capture", for: .normal)
         } else {
-            cameraView.stillCaptureButton.setTitle((HJCameraManager.shared().isVideoRecording == false ? "Record" : "Stop"), for: .normal)
+            cameraView.stillCaptureButton.setTitle((P9CameraManager.shared().isVideoRecording == false ? "Record" : "Stop"), for: .normal)
         }
         cameraView.flashButton.isEnabled = enable
         cameraView.positionButton.isEnabled = enable
@@ -327,8 +327,8 @@ class CaptureViewController: UIViewController {
         cameraView.flashButton.setTitle(flashTitle, for:.normal)
         cameraView.positionButton.setTitle(positionTitle, for:.normal)
         cameraView.contentModeButton.setTitle(contentModeTitle, for: .normal)
-        cameraView.photoButton.isEnabled = (enable == true ? !HJCameraManager.shared().isVideoRecording : false)
-        cameraView.videoButton.isEnabled = (enable == true ? !HJCameraManager.shared().isVideoRecording : false)
+        cameraView.photoButton.isEnabled = (enable == true ? !P9CameraManager.shared().isVideoRecording : false)
+        cameraView.videoButton.isEnabled = (enable == true ? !P9CameraManager.shared().isVideoRecording : false)
     }
     
     private func handleRecodingResult(fileUrl:URL) {
