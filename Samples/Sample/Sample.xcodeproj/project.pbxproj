@@ -11,7 +11,7 @@
 		02ADF8A11C8808FE0082B16E /* CaptureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02ADF8A01C8808FE0082B16E /* CaptureViewController.swift */; };
 		02ADF8A61C8808FE0082B16E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 02ADF8A51C8808FE0082B16E /* Assets.xcassets */; };
 		02ADF8A91C8808FE0082B16E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 02ADF8A71C8808FE0082B16E /* LaunchScreen.storyboard */; };
-		02ADF8B41C8809670082B16E /* HJCameraManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 02ADF8B31C8809670082B16E /* HJCameraManager.m */; };
+		02ADF8B41C8809670082B16E /* P9CameraManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 02ADF8B31C8809670082B16E /* P9CameraManager.m */; };
 		02ADF8B61C880CF70082B16E /* CameraView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 02ADF8B51C880CF70082B16E /* CameraView.xib */; };
 		02ADF8B81C880D3D0082B16E /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02ADF8B71C880D3D0082B16E /* CameraView.swift */; };
 		02ADF8BA1C8828290082B16E /* PhotoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02ADF8B91C8828290082B16E /* PhotoViewController.swift */; };
@@ -25,8 +25,8 @@
 		02ADF8A81C8808FE0082B16E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		02ADF8AA1C8808FE0082B16E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		02ADF8B11C8809670082B16E /* Sample-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Sample-Bridging-Header.h"; sourceTree = SOURCE_ROOT; };
-		02ADF8B21C8809670082B16E /* HJCameraManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HJCameraManager.h; path = ../../Sources/HJCameraManager.h; sourceTree = "<group>"; };
-		02ADF8B31C8809670082B16E /* HJCameraManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = HJCameraManager.m; path = ../../Sources/HJCameraManager.m; sourceTree = "<group>"; };
+		02ADF8B21C8809670082B16E /* P9CameraManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = P9CameraManager.h; path = ../../Sources/P9CameraManager.h; sourceTree = "<group>"; };
+		02ADF8B31C8809670082B16E /* P9CameraManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = P9CameraManager.m; path = ../../Sources/P9CameraManager.m; sourceTree = "<group>"; };
 		02ADF8B51C880CF70082B16E /* CameraView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = CameraView.xib; sourceTree = "<group>"; };
 		02ADF8B71C880D3D0082B16E /* CameraView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		02ADF8B91C8828290082B16E /* PhotoViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoViewController.swift; sourceTree = "<group>"; };
@@ -47,7 +47,7 @@
 			isa = PBXGroup;
 			children = (
 				02ADF89D1C8808FE0082B16E /* Sample */,
-				02ADF8B01C8809490082B16E /* HJCameraManager */,
+				02ADF8B01C8809490082B16E /* P9CameraManager */,
 				02ADF89C1C8808FE0082B16E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -76,13 +76,13 @@
 			path = Sample;
 			sourceTree = "<group>";
 		};
-		02ADF8B01C8809490082B16E /* HJCameraManager */ = {
+		02ADF8B01C8809490082B16E /* P9CameraManager */ = {
 			isa = PBXGroup;
 			children = (
-				02ADF8B21C8809670082B16E /* HJCameraManager.h */,
-				02ADF8B31C8809670082B16E /* HJCameraManager.m */,
+				02ADF8B21C8809670082B16E /* P9CameraManager.h */,
+				02ADF8B31C8809670082B16E /* P9CameraManager.m */,
 			);
-			name = HJCameraManager;
+			name = P9CameraManager;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -159,7 +159,7 @@
 			files = (
 				02ADF8A11C8808FE0082B16E /* CaptureViewController.swift in Sources */,
 				02ADF89F1C8808FE0082B16E /* AppDelegate.swift in Sources */,
-				02ADF8B41C8809670082B16E /* HJCameraManager.m in Sources */,
+				02ADF8B41C8809670082B16E /* P9CameraManager.m in Sources */,
 				02ADF8B81C880D3D0082B16E /* CameraView.swift in Sources */,
 				02ADF8BA1C8828290082B16E /* PhotoViewController.swift in Sources */,
 			);

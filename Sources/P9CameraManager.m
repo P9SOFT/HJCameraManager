@@ -1,5 +1,5 @@
 //
-//  HJCameraManager.m
+//  P9CameraManager.m
 //  HJBox
 //
 //  Created by Tae Hyun Na on 2013. 11. 4.
@@ -7,15 +7,15 @@
 //
 //  Licensed under the MIT license.
 
-#import "HJCameraManager.h"
+#import "P9CameraManager.h"
 
-@interface HJCameraManager () <AVCaptureVideoDataOutputSampleBufferDelegate, AVCapturePhotoCaptureDelegate, AVCaptureFileOutputRecordingDelegate>
+@interface P9CameraManager () <AVCaptureVideoDataOutputSampleBufferDelegate, AVCapturePhotoCaptureDelegate, AVCaptureFileOutputRecordingDelegate>
 {
-    HJCameraManagerFlashMode            _flashMode;
-    HJCameraManagerTorchMode            _torchMode;
-    HJCameraManagerDevicePosition       _devicePosition;
-    HJCameraManagerVideoOrientation     _videoOrientation;
-    HJCameraManagerPreviewContentMode   _previewContentMode;
+    P9CameraManagerFlashMode            _flashMode;
+    P9CameraManagerTorchMode            _torchMode;
+    P9CameraManagerDevicePosition       _devicePosition;
+    P9CameraManagerVideoOrientation     _videoOrientation;
+    P9CameraManagerPreviewContentMode   _previewContentMode;
 }
 
 @property (nonatomic, strong) AVCaptureSession *session;
@@ -33,24 +33,24 @@
 @property (nonatomic, strong) NSMutableArray *photoCaptureCompletionQueue;
 
 - (void)reset;
-- (void)postNotifyWithStatus:(HJCameraManagerStatus)status image:(UIImage *)image fileUrl:(NSURL *)fileUrl completion:(HJCameraManagerCompletion)completion;
+- (void)postNotifyWithStatus:(P9CameraManagerStatus)status image:(UIImage *)image fileUrl:(NSURL *)fileUrl completion:(P9CameraManagerCompletion)completion;
 - (AVCaptureConnection *)videoConnectionOfCaptureOutput:(AVCaptureOutput *)output;
 - (BOOL)updateVideoOrientationForCaptureOutput:(AVCaptureOutput *)output;
 - (AVCaptureDevice *)captureDeviceForPosition:(AVCaptureDevicePosition)position;
 - (UIImage *)imageFromSampleBuffer:(CMSampleBufferRef)sampleBuffer;
-+ (HJCameraManagerVideoOrientation)orientationFor:(CGAffineTransform)preferredTransform;
++ (P9CameraManagerVideoOrientation)orientationFor:(CGAffineTransform)preferredTransform;
 + (CGAffineTransform)transformFor:(CGSize)renderSize naturalSize:(CGSize)naturalSize preferredTransform:(CGAffineTransform)preferredTransform;
 + (CGSize)sizeForCenterCrop:(CGSize)naturalSize;
 + (CGAffineTransform)transformForCenterCrop:(CGSize)renderSize naturalSize:(CGSize)naturalSize preferredTransform:(CGAffineTransform)preferredTransform;
 + (dispatch_queue_t)imageProcessQueue;
-+ (UIImage *)orientationFixImage:(UIImage *)image videoOrientation:(HJCameraManagerVideoOrientation)videoOrientation;
-+ (UIImage *)processingImage:(UIImage *)image type:(HJCameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize;
++ (UIImage *)orientationFixImage:(UIImage *)image videoOrientation:(P9CameraManagerVideoOrientation)videoOrientation;
++ (UIImage *)processingImage:(UIImage *)image type:(P9CameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize;
 + (UIImage *)cropImage:(UIImage *)image cropRect:(CGRect)cropRect;
-+ (AVAssetExportSession *)exportSessionForProcessingVideo:(NSURL *)fileUrl toOutputFileUrl:(NSURL *)outputFileUrl type:(HJCameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize preset:(NSString *)preset;
++ (AVAssetExportSession *)exportSessionForProcessingVideo:(NSURL *)fileUrl toOutputFileUrl:(NSURL *)outputFileUrl type:(P9CameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize preset:(NSString *)preset;
 
 @end
 
-@implementation HJCameraManager
+@implementation P9CameraManager
 
 @dynamic countOfCamera;
 @dynamic flashMode;
@@ -64,12 +64,12 @@
 {
     if( (self = [super init]) != nil ) {
         _isRunning = NO;
-        _flashMode = HJCameraManagerFlashModeOff;
-        _torchMode = HJCameraManagerTorchModeOff;
-        _devicePosition = HJCameraManagerDevicePositionBack;
-        _videoOrientation = HJCameraManagerVideoOrientationPortrait;
-        _previewContentMode = HJCameraManagerPreviewContentModeResizeAspect;
-        _videoOutputSerialQueue = dispatch_queue_create("p9soft.manager.hjcamera-videoOutput", DISPATCH_QUEUE_SERIAL);
+        _flashMode = P9CameraManagerFlashModeOff;
+        _torchMode = P9CameraManagerTorchModeOff;
+        _devicePosition = P9CameraManagerDevicePositionBack;
+        _videoOrientation = P9CameraManagerVideoOrientationPortrait;
+        _previewContentMode = P9CameraManagerPreviewContentModeResizeAspect;
+        _videoOutputSerialQueue = dispatch_queue_create("p9soft.manager.p9camera-videoOutput", DISPATCH_QUEUE_SERIAL);
         if( (_capturePreviewCompletionQueue = [NSMutableArray new]) == nil ) {
             return nil;
         }
@@ -84,10 +84,10 @@
     return self;
 }
 
-+ (HJCameraManager *)sharedManager
++ (P9CameraManager *)sharedManager
 {
     static dispatch_once_t once;
-    static HJCameraManager *sharedInstance;
+    static P9CameraManager *sharedInstance;
     dispatch_once(&once, ^{sharedInstance = [[self alloc] init];});
     return sharedInstance;
 }
@@ -105,16 +105,16 @@
 - (BOOL)startWithPreviewView:(UIView * _Nullable)previewView preset:(NSString * _Nullable)preset enableVideo:(BOOL)enableVideo enableAudio:(BOOL)enableAudio
 {
     if( (previewView == nil) || (preset.length == 0) ) {
-        [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithInternalError image:nil fileUrl:nil completion:nil];
+        [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithInternalError image:nil fileUrl:nil completion:nil];
         return NO;
     }
     
     AVCaptureFlashMode flashMode = AVCaptureFlashModeOff;
     switch( _flashMode ) {
-        case HJCameraManagerFlashModeOn :
+        case P9CameraManagerFlashModeOn :
             flashMode = AVCaptureFlashModeOn;
             break;
-        case HJCameraManagerFlashModeOff :
+        case P9CameraManagerFlashModeOff :
             flashMode = AVCaptureFlashModeOff;
             break;
         default :
@@ -123,10 +123,10 @@
     
     AVCaptureTorchMode torchMode = AVCaptureTorchModeOff;
     switch( _torchMode ) {
-        case HJCameraManagerTorchModeOn :
+        case P9CameraManagerTorchModeOn :
             torchMode = AVCaptureTorchModeOn;
             break;
-        case HJCameraManagerTorchModeOff :
+        case P9CameraManagerTorchModeOff :
             torchMode = AVCaptureTorchModeOff;
             break;
         default :
@@ -135,10 +135,10 @@
     
     AVCaptureDevicePosition position = AVCaptureDevicePositionUnspecified;
     switch( _devicePosition ) {
-        case HJCameraManagerDevicePositionBack :
+        case P9CameraManagerDevicePositionBack :
             position = AVCaptureDevicePositionBack;
             break;
-        case HJCameraManagerDevicePositionFront :
+        case P9CameraManagerDevicePositionFront :
             position = AVCaptureDevicePositionFront;
             break;
         default :
@@ -151,7 +151,7 @@
             return NO;
         }
         if( (_session = [[AVCaptureSession alloc] init]) == nil ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithInternalError image:nil fileUrl:nil completion:nil];
+            [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithInternalError image:nil fileUrl:nil completion:nil];
             return NO;
         }
         
@@ -159,7 +159,7 @@
         
         if( [self.session canSetSessionPreset:preset] == NO ) {
             [self reset];
-            [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
+            [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
             return NO;
         }
         _session.sessionPreset = preset;
@@ -177,7 +177,7 @@
         }
         if( (_captureDeviceInput == nil) || ([_session canAddInput:_captureDeviceInput] == NO) ) {
             [self reset];
-            [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
+            [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
             return NO;
         }
         [_session addInput:_captureDeviceInput];
@@ -186,20 +186,20 @@
             _photoOutput = [[AVCapturePhotoOutput alloc] init];
             if( (_photoOutput == nil) || ([_session canAddOutput:_photoOutput] == NO) ) {
                 [self reset];
-                [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
+                [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
                 return NO;
             }
             [_session addOutput:_photoOutput];
         } else {
             if( (_stillImageOutput = [[AVCaptureStillImageOutput alloc] init]) == nil ) {
                 [self reset];
-                [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
+                [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
                 return NO;
             }
             [_stillImageOutput setOutputSettings:@{AVVideoCodecJPEG:AVVideoCodecKey}];
             if( [_session canAddOutput:_stillImageOutput] == NO ) {
                 [self reset];
-                [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
+                [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
                 return NO;
             }
             [_session addOutput:_stillImageOutput];
@@ -219,7 +219,7 @@
             _movieFileOutput = [[AVCaptureMovieFileOutput alloc] init];
             if( (_movieFileOutput == nil) || ([_session canAddOutput:_movieFileOutput] == NO) ) {
                 [self reset];
-                [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
+                [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
                 return NO;
             }
             [_session addOutput:_movieFileOutput];
@@ -229,7 +229,7 @@
             AVCaptureDevice *audioDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
             if( (audioDevice == nil) || ((_audioDeviceInput = [AVCaptureDeviceInput deviceInputWithDevice:audioDevice error:nil]) == nil) || ([_session canAddInput:_audioDeviceInput] == NO) ) {
                 [self reset];
-                [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
+                [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithAccessDenied image:nil fileUrl:nil completion:nil];
                 return NO;
             }
             [_session addInput:_audioDeviceInput];
@@ -239,16 +239,16 @@
         
         if( (_videoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:_session]) == nil ) {
             [self reset];
-            [self postNotifyWithStatus:HJCameraManagerStatusStartFailedWithInternalError image:nil fileUrl:nil completion:nil];
+            [self postNotifyWithStatus:P9CameraManagerStatusStartFailedWithInternalError image:nil fileUrl:nil completion:nil];
             return NO;
         }
         
         AVLayerVideoGravity gravity = AVLayerVideoGravityResizeAspect;
         switch( _previewContentMode ) {
-            case HJCameraManagerPreviewContentModeResizeAspectFill :
+            case P9CameraManagerPreviewContentModeResizeAspectFill :
                 gravity = AVLayerVideoGravityResizeAspectFill;
                 break;
-            case HJCameraManagerPreviewContentModeResize :
+            case P9CameraManagerPreviewContentModeResize :
                 gravity = AVLayerVideoGravityResize;
                 break;
             default :
@@ -258,13 +258,13 @@
         if( _videoPreviewLayer.connection.isVideoOrientationSupported == YES ) {
             AVCaptureVideoOrientation orientation = AVCaptureVideoOrientationPortrait;
             switch( _videoOrientation ) {
-                case HJCameraManagerVideoOrientationPortraitUpsideDown :
+                case P9CameraManagerVideoOrientationPortraitUpsideDown :
                     orientation = AVCaptureVideoOrientationPortraitUpsideDown;
                     break;
-                case HJCameraManagerVideoOrientationLandscapeLeft :
+                case P9CameraManagerVideoOrientationLandscapeLeft :
                     orientation = AVCaptureVideoOrientationLandscapeLeft;
                     break;
-                case HJCameraManagerVideoOrientationLandscapeRight :
+                case P9CameraManagerVideoOrientationLandscapeRight :
                     orientation = AVCaptureVideoOrientationLandscapeRight;
                     break;
                 default :
@@ -281,7 +281,7 @@
         
     }
     
-    [self postNotifyWithStatus:HJCameraManagerStatusRunning image:nil fileUrl:nil completion:nil];
+    [self postNotifyWithStatus:P9CameraManagerStatusRunning image:nil fileUrl:nil completion:nil];
     
     return YES;
 }
@@ -296,7 +296,7 @@
         [self reset];
         _isRunning = NO;
     }
-    [self postNotifyWithStatus: HJCameraManagerStatusIdle image:nil fileUrl:nil completion:nil];
+    [self postNotifyWithStatus: P9CameraManagerStatusIdle image:nil fileUrl:nil completion:nil];
 }
 
 - (BOOL)toggleCamera
@@ -332,12 +332,12 @@
     return NO;
 }
 
-- (void)captureStillImage:(HJCameraManagerCompletion _Nullable)completion
+- (void)captureStillImage:(P9CameraManagerCompletion _Nullable)completion
 {
     @synchronized (self) {
         if (@available(iOS 10.0, *)) {
             if( (_isRunning == NO) || (_photoOutput == nil) ) {
-                [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+                [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
                 return;
             }
             AVCapturePhotoSettings *settings = [[AVCapturePhotoSettings alloc] init];
@@ -348,23 +348,23 @@
                 [_photoCaptureCompletionQueue addObject:completion];
             }
             if( [self updateVideoOrientationForCaptureOutput:_photoOutput] == NO ) {
-                [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:nil fileUrl:nil completion:completion];
+                [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptured image:nil fileUrl:nil completion:completion];
                 return;
             }
             [_photoOutput capturePhotoWithSettings:settings delegate:self];
         } else {
             if( (_isRunning == NO) || (_stillImageOutput == nil) ) {
-                [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+                [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
                 return;
             }
             AVCaptureConnection *connection = [self videoConnectionOfCaptureOutput:_stillImageOutput];
             if( (connection == nil) || ([self updateVideoOrientationForCaptureOutput:_stillImageOutput] == NO) ) {
-                [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:nil fileUrl:nil completion:completion];
+                [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptured image:nil fileUrl:nil completion:completion];
                 return;
             }
             [_stillImageOutput captureStillImageAsynchronouslyFromConnection: connection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
                 if( imageDataSampleBuffer == NULL ) {
-                    [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+                    [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
                     return;
                 }
                 UIImage *image = nil;
@@ -373,20 +373,20 @@
                     image = [[UIImage alloc] initWithData:data];
                 }
                 if( image != nil ) {
-                    [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:image fileUrl:nil completion:completion];
+                    [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptured image:image fileUrl:nil completion:completion];
                 } else {
-                    [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+                    [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
                 }
             }];
         }
     }
 }
 
-- (void)capturePreviewImage:(HJCameraManagerCompletion _Nullable)completion
+- (void)capturePreviewImage:(P9CameraManagerCompletion _Nullable)completion
 {
     @synchronized (self) {
         if( (_isRunning == NO) || (_videoOutput == nil) ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+            [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
             return;
         }
         [_capturePreviewCompletionQueue addObject:(completion != nil ? @[@(self.videoOrientation), completion] : @[@(self.videoOrientation)])];
@@ -396,17 +396,17 @@
 - (BOOL)recordVideoToFileUrl:(NSURL * _Nullable)fileUrl
 {
     if( fileUrl == nil ) {
-        [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordFailed image:nil fileUrl:nil completion:nil];
+        [self postNotifyWithStatus:P9CameraManagerStatusVideoRecordFailed image:nil fileUrl:nil completion:nil];
         return NO;
     }
     
     @synchronized (self) {
         if( (_isRunning == NO) || ([_movieFileOutput connectionWithMediaType:AVMediaTypeVideo].active == NO) || (_movieFileOutput.isRecording == YES) ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordFailed image:nil fileUrl:fileUrl completion:nil];
+            [self postNotifyWithStatus:P9CameraManagerStatusVideoRecordFailed image:nil fileUrl:fileUrl completion:nil];
             return NO;
         }
         if( [self updateVideoOrientationForCaptureOutput:_movieFileOutput] == NO ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordFailed image:nil fileUrl:fileUrl completion:nil];
+            [self postNotifyWithStatus:P9CameraManagerStatusVideoRecordFailed image:nil fileUrl:fileUrl completion:nil];
             return NO;
         }
         [_movieFileOutput startRecordingToOutputFileURL:fileUrl recordingDelegate:self];
@@ -415,11 +415,11 @@
     return YES;
 }
 
-- (void)stopRecordingVideo:(HJCameraManagerCompletion _Nullable)completion
+- (void)stopRecordingVideo:(P9CameraManagerCompletion _Nullable)completion
 {
     @synchronized (self) {
         if( (_isRunning == NO) || (_movieFileOutput.isRecording == NO) ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordFailed image:nil fileUrl:_movieFileOutput.outputFileURL completion:completion];
+            [self postNotifyWithStatus:P9CameraManagerStatusVideoRecordFailed image:nil fileUrl:_movieFileOutput.outputFileURL completion:completion];
             return;
         }
         [_moveFileSaveToPhotosAlbumCompletionQueue addObject:completion];
@@ -431,16 +431,16 @@
 {
     switch( deviceOrientation ) {
         case UIDeviceOrientationPortrait :
-            self.videoOrientation = HJCameraManagerVideoOrientationPortrait;
+            self.videoOrientation = P9CameraManagerVideoOrientationPortrait;
             break;
         case UIDeviceOrientationPortraitUpsideDown :
-            self.videoOrientation = HJCameraManagerVideoOrientationPortraitUpsideDown;
+            self.videoOrientation = P9CameraManagerVideoOrientationPortraitUpsideDown;
             break;
         case UIDeviceOrientationLandscapeLeft :
-            self.videoOrientation = HJCameraManagerVideoOrientationLandscapeRight;
+            self.videoOrientation = P9CameraManagerVideoOrientationLandscapeRight;
             break;
         case UIDeviceOrientationLandscapeRight :
-            self.videoOrientation = HJCameraManagerVideoOrientationLandscapeLeft;
+            self.videoOrientation = P9CameraManagerVideoOrientationLandscapeLeft;
             break;
         default :
             break;
@@ -451,44 +451,44 @@
 {
     static dispatch_once_t once;
     static dispatch_queue_t imageProcessSerialQueue;
-    dispatch_once(&once, ^{imageProcessSerialQueue = dispatch_queue_create("p9soft.manager.hjcamera-imageProcess", DISPATCH_QUEUE_SERIAL);});
+    dispatch_once(&once, ^{imageProcessSerialQueue = dispatch_queue_create("p9soft.manager.p9camera-imageProcess", DISPATCH_QUEUE_SERIAL);});
     return imageProcessSerialQueue;
 }
 
-+ (void)processingImage:(UIImage * _Nullable)image type:(HJCameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize completion:(HJCameraManagerCompletion _Nullable)completion
++ (void)processingImage:(UIImage * _Nullable)image type:(P9CameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize completion:(P9CameraManagerCompletion _Nullable)completion
 {
     if( completion == nil ) {
         return;
     }
     if( image == nil ) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            completion(HJCameraManagerStatusMediaProcessingFailed, nil, nil);
+            completion(P9CameraManagerStatusMediaProcessingFailed, nil, nil);
         });
         return;
     }
-    dispatch_async([HJCameraManager imageProcessQueue], ^{
+    dispatch_async([P9CameraManager imageProcessQueue], ^{
         UIImage *processedImage = [self processingImage:image type:type referenceSize:referenceSize ];
-        HJCameraManagerStatus status = (processedImage != nil ? HJCameraManagerStatusMediaProcessingDone : HJCameraManagerStatusMediaProcessingFailed);
+        P9CameraManagerStatus status = (processedImage != nil ? P9CameraManagerStatusMediaProcessingDone : P9CameraManagerStatusMediaProcessingFailed);
         NSMutableDictionary *paramDict = [NSMutableDictionary new];
-        paramDict[HJCameraManagerNotifyParameterKeyStatus] = @((NSInteger)status);
+        paramDict[P9CameraManagerNotifyParameterKeyStatus] = @((NSInteger)status);
         if( processedImage != nil ) {
-            paramDict[HJCameraManagerNotifyParameterKeyImage] = processedImage;
+            paramDict[P9CameraManagerNotifyParameterKeyImage] = processedImage;
         }
         dispatch_async( dispatch_get_main_queue(), ^{
             if( completion != nil ) {
                 completion(status, processedImage, nil);
             }
-            [[NSNotificationCenter defaultCenter] postNotificationName:HJCameraManagerNotification object:self userInfo:paramDict];
+            [[NSNotificationCenter defaultCenter] postNotificationName:P9CameraManagerNotification object:self userInfo:paramDict];
         });
     });
 }
 
-+ (void)processingVideo:(NSURL * _Nullable)fileUrl toOutputFileUrl:(NSURL * _Nullable)outputFileUrl type:(HJCameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize preset:(NSString *)preset completion:(HJCameraManagerCompletion _Nullable)completion
++ (void)processingVideo:(NSURL * _Nullable)fileUrl toOutputFileUrl:(NSURL * _Nullable)outputFileUrl type:(P9CameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize preset:(NSString *)preset completion:(P9CameraManagerCompletion _Nullable)completion
 {
     if( (fileUrl == nil) || (outputFileUrl == nil) || (preset == nil) ) {
         if( completion != nil ) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                completion(HJCameraManagerStatusMediaProcessingFailed, nil, outputFileUrl);
+                completion(P9CameraManagerStatusMediaProcessingFailed, nil, outputFileUrl);
             });
         }
         return;
@@ -496,18 +496,18 @@
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         AVAssetExportSession *exportSession = nil;
         NSMutableDictionary *paramDict = [NSMutableDictionary new];
-        HJCameraManagerStatus status = HJCameraManagerStatusMediaProcessingFailed;
-        if( type == HJCameraManagerImageProcessingTypePass ) {
+        P9CameraManagerStatus status = P9CameraManagerStatusMediaProcessingFailed;
+        if( type == P9CameraManagerImageProcessingTypePass ) {
             if( [NSFileManager.defaultManager copyItemAtURL:fileUrl toURL:outputFileUrl error:nil] == YES ) {
-                status = HJCameraManagerStatusMediaProcessingDone;
+                status = P9CameraManagerStatusMediaProcessingDone;
             }
         } else {
             if( (exportSession = [self exportSessionForProcessingVideo:fileUrl toOutputFileUrl:outputFileUrl type:type referenceSize:referenceSize preset:preset]) != nil ) {
-                status = HJCameraManagerStatusMediaProcessingDone;
+                status = P9CameraManagerStatusMediaProcessingDone;
             }
         }
-        paramDict[HJCameraManagerNotifyParameterKeyStatus] = @((NSInteger)status);
-        paramDict[HJCameraManagerNotifyParameterKeyFileUrl] = outputFileUrl;
+        paramDict[P9CameraManagerNotifyParameterKeyStatus] = @((NSInteger)status);
+        paramDict[P9CameraManagerNotifyParameterKeyFileUrl] = outputFileUrl;
         if( exportSession != nil ) {
             [[NSFileManager defaultManager] removeItemAtURL:outputFileUrl error:nil];
             [exportSession exportAsynchronouslyWithCompletionHandler:^{
@@ -515,7 +515,7 @@
                     if( completion != nil ) {
                         completion(status, nil, outputFileUrl);
                     }
-                    [[NSNotificationCenter defaultCenter] postNotificationName:HJCameraManagerNotification object:self userInfo:paramDict];
+                    [[NSNotificationCenter defaultCenter] postNotificationName:P9CameraManagerNotification object:self userInfo:paramDict];
                 });
             }];
         } else {
@@ -523,7 +523,7 @@
                 if( completion != nil ) {
                     completion(status, nil, outputFileUrl);
                 }
-                [[NSNotificationCenter defaultCenter] postNotificationName:HJCameraManagerNotification object:self userInfo:paramDict];
+                [[NSNotificationCenter defaultCenter] postNotificationName:P9CameraManagerNotification object:self userInfo:paramDict];
             });
         }
     });
@@ -545,21 +545,21 @@
     _session = nil;
 }
 
-- (void)postNotifyWithStatus:(HJCameraManagerStatus)status image:(UIImage *)image fileUrl:(NSURL *)fileUrl completion:(HJCameraManagerCompletion)completion
+- (void)postNotifyWithStatus:(P9CameraManagerStatus)status image:(UIImage *)image fileUrl:(NSURL *)fileUrl completion:(P9CameraManagerCompletion)completion
 {
     NSMutableDictionary *paramDict = [NSMutableDictionary new];
-    paramDict[HJCameraManagerNotifyParameterKeyStatus] = @((NSInteger)status);
+    paramDict[P9CameraManagerNotifyParameterKeyStatus] = @((NSInteger)status);
     if( image != nil ) {
-        paramDict[HJCameraManagerNotifyParameterKeyImage] = image;
+        paramDict[P9CameraManagerNotifyParameterKeyImage] = image;
     }
     if( fileUrl != nil ) {
-        paramDict[HJCameraManagerNotifyParameterKeyFileUrl] = fileUrl;
+        paramDict[P9CameraManagerNotifyParameterKeyFileUrl] = fileUrl;
     }
     dispatch_async( dispatch_get_main_queue(), ^{
         if( completion != nil ) {
             completion(status, image, fileUrl);
         }
-        [[NSNotificationCenter defaultCenter] postNotificationName:HJCameraManagerNotification object:self userInfo:paramDict];
+        [[NSNotificationCenter defaultCenter] postNotificationName:P9CameraManagerNotification object:self userInfo:paramDict];
     });
 }
     
@@ -594,13 +594,13 @@
         return NO;
     }
     switch( self.videoOrientation ) {
-        case HJCameraManagerVideoOrientationLandscapeLeft :
+        case P9CameraManagerVideoOrientationLandscapeLeft :
             connection.videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
             break;
-        case HJCameraManagerVideoOrientationLandscapeRight :
+        case P9CameraManagerVideoOrientationLandscapeRight :
             connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
             break;
-        case HJCameraManagerVideoOrientationPortraitUpsideDown :
+        case P9CameraManagerVideoOrientationPortraitUpsideDown :
             connection.videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
             break;
         default :
@@ -647,48 +647,48 @@
     return image;
 }
 
-+ (HJCameraManagerVideoOrientation)orientationFor:(CGAffineTransform)preferredTransform
++ (P9CameraManagerVideoOrientation)orientationFor:(CGAffineTransform)preferredTransform
 {
-    HJCameraManagerVideoOrientation orientation = HJCameraManagerVideoOrientationPortrait;
+    P9CameraManagerVideoOrientation orientation = P9CameraManagerVideoOrientationPortrait;
     if( (preferredTransform.a == 0) && (preferredTransform.b == 1) && (preferredTransform.c == -1) && (preferredTransform.d == 0) ) {
-        orientation = HJCameraManagerVideoOrientationPortrait;
+        orientation = P9CameraManagerVideoOrientationPortrait;
     } else if( (preferredTransform.a == 0) && (preferredTransform.b == -1) && (preferredTransform.c == 1) && (preferredTransform.d == 0) ) {
-        orientation = HJCameraManagerVideoOrientationPortraitUpsideDown;
+        orientation = P9CameraManagerVideoOrientationPortraitUpsideDown;
     } else if( (preferredTransform.a == 1) && (preferredTransform.b == 0) && (preferredTransform.c == 0) && (preferredTransform.d == 1) ) {
-        orientation = HJCameraManagerVideoOrientationLandscapeRight;
+        orientation = P9CameraManagerVideoOrientationLandscapeRight;
     } else if( (preferredTransform.a == -1) && (preferredTransform.b == 0) && (preferredTransform.c == 0) && (preferredTransform.d == -1) ) {
-        orientation = HJCameraManagerVideoOrientationLandscapeLeft;
+        orientation = P9CameraManagerVideoOrientationLandscapeLeft;
     }
     return orientation;
 }
 
 + (CGAffineTransform)transformFor:(CGSize)renderSize naturalSize:(CGSize)naturalSize preferredTransform:(CGAffineTransform)preferredTransform
 {
-    HJCameraManagerVideoOrientation orientation = [HJCameraManager orientationFor:preferredTransform];
+    P9CameraManagerVideoOrientation orientation = [P9CameraManager orientationFor:preferredTransform];
     CGAffineTransform transform = CGAffineTransformIdentity;
     CGFloat sx = 1;
     CGFloat sy = 1;
     switch( orientation ) {
-        case HJCameraManagerVideoOrientationPortrait :
+        case P9CameraManagerVideoOrientationPortrait :
             sx = renderSize.width/naturalSize.height;
             sy = renderSize.height/naturalSize.width;
             transform = CGAffineTransformConcat(transform, CGAffineTransformMakeScale(sy, sx));
             transform = CGAffineTransformConcat(transform, CGAffineTransformMakeRotation(90*(M_PI/180)));
             transform = CGAffineTransformConcat(transform, CGAffineTransformMakeTranslation(renderSize.width, 0));
             break;
-        case HJCameraManagerVideoOrientationPortraitUpsideDown :
+        case P9CameraManagerVideoOrientationPortraitUpsideDown :
             sx = renderSize.width/naturalSize.height;
             sy = renderSize.height/naturalSize.width;
             transform = CGAffineTransformConcat(transform, CGAffineTransformMakeScale(sy, sx));
             transform = CGAffineTransformConcat(transform, CGAffineTransformMakeRotation(-90*(M_PI/180)));
             transform = CGAffineTransformConcat(transform, CGAffineTransformMakeTranslation(0, renderSize.height));
             break;
-        case HJCameraManagerVideoOrientationLandscapeRight :
+        case P9CameraManagerVideoOrientationLandscapeRight :
             sx = renderSize.width/naturalSize.width;
             sy = renderSize.height/naturalSize.height;
             transform = CGAffineTransformConcat(transform, CGAffineTransformMakeScale(sx, sy));
             break;
-        case HJCameraManagerVideoOrientationLandscapeLeft :
+        case P9CameraManagerVideoOrientationLandscapeLeft :
             sx = renderSize.width/naturalSize.width;
             sy = renderSize.height/naturalSize.height;
             transform = CGAffineTransformConcat(transform, CGAffineTransformMakeScale(-sx, -sy));
@@ -716,11 +716,11 @@
     if( renderSize.height > renderSize.width ) {
         renderSize.height = renderSize.width;
     }
-    HJCameraManagerVideoOrientation orientation = [HJCameraManager orientationFor:preferredTransform];
+    P9CameraManagerVideoOrientation orientation = [P9CameraManager orientationFor:preferredTransform];
     CGAffineTransform transform = CGAffineTransformIdentity;
     CGFloat s = 1, angle = 0, tx = 0, ty = 0;
     switch( orientation ) {
-        case HJCameraManagerVideoOrientationPortrait :
+        case P9CameraManagerVideoOrientationPortrait :
             if( naturalSize.width > naturalSize.height ) {
                 s = renderSize.height/naturalSize.height;
                 tx = renderSize.width;
@@ -732,7 +732,7 @@
             }
             angle = 90;
             break;
-        case HJCameraManagerVideoOrientationPortraitUpsideDown :
+        case P9CameraManagerVideoOrientationPortraitUpsideDown :
             if( naturalSize.width > naturalSize.height ) {
                 s = renderSize.height/naturalSize.height;
                 tx = 0;
@@ -744,7 +744,7 @@
             }
             angle = -90;
             break;
-        case HJCameraManagerVideoOrientationLandscapeRight :
+        case P9CameraManagerVideoOrientationLandscapeRight :
             if( naturalSize.width > naturalSize.height ) {
                 s = renderSize.height/naturalSize.height;
                 tx = (naturalSize.height-naturalSize.width)*0.5*s;
@@ -755,7 +755,7 @@
                 ty = (naturalSize.width-naturalSize.height)*0.5*s;
             }
             break;
-        case HJCameraManagerVideoOrientationLandscapeLeft :
+        case P9CameraManagerVideoOrientationLandscapeLeft :
             if( naturalSize.width > naturalSize.height ) {
                 s = renderSize.height/naturalSize.height;
                 tx = ((naturalSize.width-naturalSize.height)*0.5*s)+renderSize.width;
@@ -782,7 +782,7 @@
     return transform;
 }
 
-+ (UIImage *)orientationFixImage:(UIImage *)image videoOrientation:(HJCameraManagerVideoOrientation)videoOrientation
++ (UIImage *)orientationFixImage:(UIImage *)image videoOrientation:(P9CameraManagerVideoOrientation)videoOrientation
 {
     if( image == nil ) {
         return nil;
@@ -799,16 +799,16 @@
         processedImage = image;
     }
     
-    if( videoOrientation != HJCameraManagerVideoOrientationPortrait ) {
+    if( videoOrientation != P9CameraManagerVideoOrientationPortrait ) {
         UIImageOrientation orientation = UIImageOrientationUp;
         switch( videoOrientation ) {
-            case HJCameraManagerVideoOrientationLandscapeLeft :
+            case P9CameraManagerVideoOrientationLandscapeLeft :
                 orientation = UIImageOrientationLeft;
                 break;
-            case HJCameraManagerVideoOrientationLandscapeRight :
+            case P9CameraManagerVideoOrientationLandscapeRight :
                 orientation = UIImageOrientationRight;
                 break;
-            case HJCameraManagerVideoOrientationPortraitUpsideDown :
+            case P9CameraManagerVideoOrientationPortraitUpsideDown :
                 orientation = UIImageOrientationUpMirrored;
                 break;
             default :
@@ -824,7 +824,7 @@
     return processedImage;
 }
 
-+ (UIImage *)processingImage:(UIImage *)image type:(HJCameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize
++ (UIImage *)processingImage:(UIImage *)image type:(P9CameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize
 {
     if( image == nil ) {
         return nil;
@@ -835,10 +835,10 @@
     CGRect canvasRect = CGRectMake(0, 0, imageSize.width, imageSize.height);
     
     switch( type ) {
-        case HJCameraManagerImageProcessingTypePass :
+        case P9CameraManagerImageProcessingTypePass :
             processedImage = image;
             break;
-        case HJCameraManagerImageProcessingTypeResizeByGivenWidth :
+        case P9CameraManagerImageProcessingTypeResizeByGivenWidth :
             if( referenceSize.width <= 0.0 ) {
                 return nil;
             }
@@ -850,7 +850,7 @@
             processedImage = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
             break;
-        case HJCameraManagerImageProcessingTypeResizeByGivenHeight :
+        case P9CameraManagerImageProcessingTypeResizeByGivenHeight :
             if( referenceSize.height <= 0.0 ) {
                 return nil;
             }
@@ -862,7 +862,7 @@
             processedImage = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
             break;
-        case HJCameraManagerImageProcessingTypeResizeByGivenSize :
+        case P9CameraManagerImageProcessingTypeResizeByGivenSize :
             if( (referenceSize.width <= 0.0) || (referenceSize.height <= 0.0) ) {
                 return nil;
             }
@@ -873,7 +873,7 @@
             processedImage = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
             break;
-        case HJCameraManagerImageProcessingTypeResizeByGivenRate :
+        case P9CameraManagerImageProcessingTypeResizeByGivenRate :
             if( (referenceSize.width <= 0.0) || (referenceSize.height <= 0.0) ) {
                 return nil;
             } else {
@@ -888,7 +888,7 @@
                 UIGraphicsEndImageContext();
             }
             break;
-        case HJCameraManagerImageProcessingTypeCropCenterSquare :
+        case P9CameraManagerImageProcessingTypeCropCenterSquare :
             if( imageSize.width > imageSize.height ) {
                 canvasRect.size.width = imageSize.height;
                 canvasRect.size.height = imageSize.height;
@@ -900,9 +900,9 @@
                 canvasRect.origin.x = 0.0;
                 canvasRect.origin.y = (CGFloat)floor((double)((imageSize.height-imageSize.width)*0.5));
             }
-            processedImage = [HJCameraManager cropImage:image cropRect:canvasRect];
+            processedImage = [P9CameraManager cropImage:image cropRect:canvasRect];
             break;
-        case HJCameraManagerImageProcessingTypeCropCenterSquareAndResizeByGivenWidth :
+        case P9CameraManagerImageProcessingTypeCropCenterSquareAndResizeByGivenWidth :
             if( referenceSize.width <= 0.0 ) {
                 return nil;
             }
@@ -917,7 +917,7 @@
                 canvasRect.origin.x = 0.0;
                 canvasRect.origin.y = (CGFloat)floor((double)((imageSize.height-imageSize.width)*0.5));
             }
-            processedImage = [HJCameraManager cropImage:image cropRect:canvasRect];
+            processedImage = [P9CameraManager cropImage:image cropRect:canvasRect];
             if( processedImage != nil ) {
                 canvasRect.size.width = referenceSize.width;
                 canvasRect.size.height = referenceSize.width;
@@ -970,7 +970,7 @@
     return croppedImage;
 }
 
-+ (AVAssetExportSession *)exportSessionForProcessingVideo:(NSURL *)fileUrl toOutputFileUrl:(NSURL *)outputFileUrl type:(HJCameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize preset:(NSString *)preset
++ (AVAssetExportSession *)exportSessionForProcessingVideo:(NSURL *)fileUrl toOutputFileUrl:(NSURL *)outputFileUrl type:(P9CameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize preset:(NSString *)preset
 {
     if( (fileUrl == nil) || (outputFileUrl == nil) ) {
         return nil;
@@ -990,35 +990,35 @@
     CGAffineTransform transform = CGAffineTransformIdentity;
 
     switch( type ) {
-        case HJCameraManagerImageProcessingTypePass :
+        case P9CameraManagerImageProcessingTypePass :
             break;
-        case HJCameraManagerImageProcessingTypeResizeByGivenWidth :
+        case P9CameraManagerImageProcessingTypeResizeByGivenWidth :
             if( referenceSize.width <= 0.0 ) {
                 return nil;
             } else {
                 CGFloat rate = referenceSize.width/assetTack.naturalSize.width;
                 videoComposition.renderSize = CGSizeMake(referenceSize.width, (CGFloat)floor((double)(assetTack.naturalSize.height*rate)));
-                transform = [HJCameraManager transformFor:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
+                transform = [P9CameraManager transformFor:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
             }
             break;
-        case HJCameraManagerImageProcessingTypeResizeByGivenHeight :
+        case P9CameraManagerImageProcessingTypeResizeByGivenHeight :
             if( referenceSize.height <= 0.0 ) {
                 return nil;
             } else {
                 CGFloat rate = referenceSize.height/assetTack.naturalSize.height;
                 videoComposition.renderSize = CGSizeMake((CGFloat)floor((double)(referenceSize.width*rate)), referenceSize.height);
-                transform = [HJCameraManager transformFor:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
+                transform = [P9CameraManager transformFor:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
             }
             break;
-        case HJCameraManagerImageProcessingTypeResizeByGivenSize :
+        case P9CameraManagerImageProcessingTypeResizeByGivenSize :
             if( (referenceSize.width <= 0.0) || (referenceSize.height <= 0.0) ) {
                 return nil;
             } else {
                 videoComposition.renderSize = referenceSize;
-                transform = [HJCameraManager transformFor:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
+                transform = [P9CameraManager transformFor:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
             }
             break;
-        case HJCameraManagerImageProcessingTypeResizeByGivenRate :
+        case P9CameraManagerImageProcessingTypeResizeByGivenRate :
             if( (referenceSize.width <= 0.0) || (referenceSize.height <= 0.0) ) {
                 return nil;
             } else {
@@ -1026,19 +1026,19 @@
                 CGFloat rate2 = referenceSize.width/referenceSize.height;
                 CGFloat renderWidth = (CGFloat)floor((double)(assetTack.naturalSize.width*rate1));
                 videoComposition.renderSize = CGSizeMake(renderWidth, (CGFloat)floor((double)(renderWidth/rate2)));
-                transform = [HJCameraManager transformFor:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
+                transform = [P9CameraManager transformFor:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
             }
             break;
-        case HJCameraManagerImageProcessingTypeCropCenterSquare :
-            videoComposition.renderSize = [HJCameraManager sizeForCenterCrop:assetTack.naturalSize];
-            transform = [HJCameraManager transformForCenterCrop:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
+        case P9CameraManagerImageProcessingTypeCropCenterSquare :
+            videoComposition.renderSize = [P9CameraManager sizeForCenterCrop:assetTack.naturalSize];
+            transform = [P9CameraManager transformForCenterCrop:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
             break;
-        case HJCameraManagerImageProcessingTypeCropCenterSquareAndResizeByGivenWidth :
+        case P9CameraManagerImageProcessingTypeCropCenterSquareAndResizeByGivenWidth :
             if( referenceSize.width <= 0.0 ) {
                 return nil;
             }
             videoComposition.renderSize = CGSizeMake(referenceSize.width, referenceSize.height);
-            transform = [HJCameraManager transformForCenterCrop:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
+            transform = [P9CameraManager transformForCenterCrop:videoComposition.renderSize naturalSize:assetTack.naturalSize preferredTransform:assetTack.preferredTransform];
             break;
         default :
             return nil;
@@ -1066,27 +1066,27 @@
     }
 }
 
-- (HJCameraManagerFlashMode)flashMode
+- (P9CameraManagerFlashMode)flashMode
 {
     @synchronized (self) {
         return _flashMode;
     }
 }
 
-- (void)setFlashMode:(HJCameraManagerFlashMode)flashMode
+- (void)setFlashMode:(P9CameraManagerFlashMode)flashMode
 {
     if( _flashMode == flashMode ) {
         return;
     }
     AVCaptureFlashMode mode;
     switch( flashMode ) {
-        case HJCameraManagerFlashModeOn :
+        case P9CameraManagerFlashModeOn :
             mode = AVCaptureFlashModeOn;
             break;
-        case HJCameraManagerFlashModeOff :
+        case P9CameraManagerFlashModeOff :
             mode = AVCaptureFlashModeOff;
             break;
-        case HJCameraManagerFlashModeAuto :
+        case P9CameraManagerFlashModeAuto :
             mode = AVCaptureFlashModeAuto;
             break;
         default :
@@ -1109,27 +1109,27 @@
     }
 }
 
-- (HJCameraManagerTorchMode)torchMode
+- (P9CameraManagerTorchMode)torchMode
 {
     @synchronized (self) {
         return _torchMode;
     }
 }
 
-- (void)setTorchMode:(HJCameraManagerTorchMode)torchMode
+- (void)setTorchMode:(P9CameraManagerTorchMode)torchMode
 {
     if( _torchMode == torchMode ) {
         return;
     }
     AVCaptureTorchMode mode;
     switch( torchMode ) {
-        case HJCameraManagerTorchModeOn :
+        case P9CameraManagerTorchModeOn :
             mode = AVCaptureTorchModeOn;
             break;
-        case HJCameraManagerTorchModeOff :
+        case P9CameraManagerTorchModeOff :
             mode = AVCaptureTorchModeOff;
             break;
-        case HJCameraManagerTorchModeAuto :
+        case P9CameraManagerTorchModeAuto :
             mode = AVCaptureTorchModeAuto;
             break;
         default :
@@ -1152,24 +1152,24 @@
     }
 }
 
-- (HJCameraManagerDevicePosition)devicePosition
+- (P9CameraManagerDevicePosition)devicePosition
 {
     @synchronized (self) {
         return _devicePosition;
     }
 }
 
-- (void)setDevicePosition:(HJCameraManagerDevicePosition)devicePosition
+- (void)setDevicePosition:(P9CameraManagerDevicePosition)devicePosition
 {
     if( _devicePosition == devicePosition ) {
         return;
     }
     AVCaptureDevicePosition position;
     switch( devicePosition ) {
-        case HJCameraManagerDevicePositionBack :
+        case P9CameraManagerDevicePositionBack :
             position = AVCaptureDevicePositionBack;
             break;
-        case HJCameraManagerDevicePositionFront :
+        case P9CameraManagerDevicePositionFront :
             position = AVCaptureDevicePositionFront;
             break;
         default :
@@ -1201,30 +1201,30 @@
     }
 }
 
-- (HJCameraManagerVideoOrientation)videoOrientation
+- (P9CameraManagerVideoOrientation)videoOrientation
 {
     @synchronized (self) {
         return _videoOrientation;
     }
 }
 
-- (void)setVideoOrientation:(HJCameraManagerVideoOrientation)videoOrientation
+- (void)setVideoOrientation:(P9CameraManagerVideoOrientation)videoOrientation
 {
     if( _videoOrientation == videoOrientation ) {
         return;
     }
     AVCaptureVideoOrientation orientation;
     switch( videoOrientation ) {
-        case HJCameraManagerVideoOrientationPortrait :
+        case P9CameraManagerVideoOrientationPortrait :
             orientation = AVCaptureVideoOrientationPortrait;
             break;
-        case HJCameraManagerVideoOrientationPortraitUpsideDown :
+        case P9CameraManagerVideoOrientationPortraitUpsideDown :
             orientation = AVCaptureVideoOrientationPortraitUpsideDown;
             break;
-        case HJCameraManagerVideoOrientationLandscapeLeft :
+        case P9CameraManagerVideoOrientationLandscapeLeft :
             orientation = AVCaptureVideoOrientationLandscapeLeft;
             break;
-        case HJCameraManagerVideoOrientationLandscapeRight :
+        case P9CameraManagerVideoOrientationLandscapeRight :
             orientation = AVCaptureVideoOrientationLandscapeRight;
             break;
         default :
@@ -1242,27 +1242,27 @@
     }
 }
 
-- (HJCameraManagerPreviewContentMode)previewContentMode
+- (P9CameraManagerPreviewContentMode)previewContentMode
 {
     @synchronized (self) {
         return _previewContentMode;
     }
 }
     
-- (void)setPreviewContentMode:(HJCameraManagerPreviewContentMode)previewContentMode
+- (void)setPreviewContentMode:(P9CameraManagerPreviewContentMode)previewContentMode
 {
     if( _previewContentMode == previewContentMode ) {
         return;
     }
     AVLayerVideoGravity videoGravity;
     switch( previewContentMode ) {
-        case HJCameraManagerPreviewContentModeResizeAspect :
+        case P9CameraManagerPreviewContentModeResizeAspect :
             videoGravity = AVLayerVideoGravityResizeAspect;
             break;
-        case HJCameraManagerPreviewContentModeResizeAspectFill :
+        case P9CameraManagerPreviewContentModeResizeAspectFill :
             videoGravity = AVLayerVideoGravityResizeAspectFill;
             break;
-        case HJCameraManagerPreviewContentModeResize :
+        case P9CameraManagerPreviewContentModeResize :
             videoGravity = AVLayerVideoGravityResize;
             break;
         default :
@@ -1299,32 +1299,32 @@
     }
     
     if( (notify == YES) || (pair != nil) ) {
-        HJCameraManagerVideoOrientation orientation = HJCameraManagerVideoOrientationPortrait;
+        P9CameraManagerVideoOrientation orientation = P9CameraManagerVideoOrientationPortrait;
         if( pair.count > 0 ) {
-            orientation = (HJCameraManagerVideoOrientation)[pair[0] integerValue];
+            orientation = (P9CameraManagerVideoOrientation)[pair[0] integerValue];
             switch( orientation ) {
-                case HJCameraManagerVideoOrientationLandscapeLeft :
-                    orientation = HJCameraManagerVideoOrientationLandscapeRight;
+                case P9CameraManagerVideoOrientationLandscapeLeft :
+                    orientation = P9CameraManagerVideoOrientationLandscapeRight;
                     break;
-                case HJCameraManagerVideoOrientationLandscapeRight :
-                    orientation = HJCameraManagerVideoOrientationLandscapeLeft;
+                case P9CameraManagerVideoOrientationLandscapeRight :
+                    orientation = P9CameraManagerVideoOrientationLandscapeLeft;
                     break;
                 default :
                     break;
             }
         }
-        HJCameraManagerCompletion completion = nil;
+        P9CameraManagerCompletion completion = nil;
         if( pair.count > 1 ) {
-            completion = (HJCameraManagerCompletion)pair[1];
+            completion = (P9CameraManagerCompletion)pair[1];
         }
         UIImage *image = nil;
         if( sampleBuffer != NULL ) {
-            image = [HJCameraManager orientationFixImage:[self imageFromSampleBuffer:sampleBuffer] videoOrientation:orientation];
+            image = [P9CameraManager orientationFixImage:[self imageFromSampleBuffer:sampleBuffer] videoOrientation:orientation];
         }
         if( (image != nil) && (notify == YES) ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusPreviewImageCaptured image:image fileUrl:nil completion:nil];
+            [self postNotifyWithStatus:P9CameraManagerStatusPreviewImageCaptured image:image fileUrl:nil completion:nil];
         }
-        [self postNotifyWithStatus:(image != nil ? HJCameraManagerStatusStillImageCaptured : HJCameraManagerStatusStillImageCaptureFailed) image:image fileUrl:nil completion:completion];
+        [self postNotifyWithStatus:(image != nil ? P9CameraManagerStatusStillImageCaptured : P9CameraManagerStatusStillImageCaptureFailed) image:image fileUrl:nil completion:completion];
     }
 }
 
@@ -1333,13 +1333,13 @@
 - (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhotoSampleBuffer:(nullable CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(nullable CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(nullable AVCaptureBracketedStillImageSettings *)bracketSettings error:(nullable NSError *)error API_AVAILABLE(ios(10))
 {
     @synchronized (self) {
-        HJCameraManagerCompletion completion = nil;
+        P9CameraManagerCompletion completion = nil;
         if( _photoCaptureCompletionQueue.count > 0 ) {
             completion = [_photoCaptureCompletionQueue firstObject];
             [_photoCaptureCompletionQueue removeObjectAtIndex:0];
         }
         if( photoSampleBuffer == NULL ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+            [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
             return;
         }
         UIImage *image = nil;
@@ -1348,9 +1348,9 @@
             image = [[UIImage alloc] initWithData:data];
         }
         if( image != nil ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:image fileUrl:nil completion:completion];
+            [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptured image:image fileUrl:nil completion:completion];
         } else {
-            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+            [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
         }
     }
 }
@@ -1358,13 +1358,13 @@
 - (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(nullable NSError *)error API_AVAILABLE(ios(11.0))
 {
     @synchronized (self) {
-        HJCameraManagerCompletion completion = nil;
+        P9CameraManagerCompletion completion = nil;
         if( _photoCaptureCompletionQueue.count > 0 ) {
             completion = [_photoCaptureCompletionQueue firstObject];
             [_photoCaptureCompletionQueue removeObjectAtIndex:0];
         }
         if( photo == nil ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+            [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
             return;
         }
         UIImage *image = nil;
@@ -1373,9 +1373,9 @@
             image = [[UIImage alloc] initWithData:data];
         }
         if( image != nil ) {
-            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptured image:image fileUrl:nil completion:completion];
+            [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptured image:image fileUrl:nil completion:completion];
         } else {
-            [self postNotifyWithStatus:HJCameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
+            [self postNotifyWithStatus:P9CameraManagerStatusStillImageCaptureFailed image:nil fileUrl:nil completion:completion];
         }
     }
 }
@@ -1384,22 +1384,22 @@
 
 - (void)captureOutput:(AVCaptureFileOutput *)output didStartRecordingToOutputFileAtURL:(NSURL *)fileURL fromConnections:(NSArray<AVCaptureConnection *> *)connections
 {
-    [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordBegan image:nil fileUrl:fileURL completion:nil];
+    [self postNotifyWithStatus:P9CameraManagerStatusVideoRecordBegan image:nil fileUrl:fileURL completion:nil];
 }
 
 - (void)captureOutput:(AVCaptureFileOutput *)output didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL fromConnections:(NSArray<AVCaptureConnection *> *)connections error:(NSError *)error
 {
     if( (error != nil) || (outputFileURL == nil) ) {
-        [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordFailed image:nil fileUrl:outputFileURL completion:nil];
+        [self postNotifyWithStatus:P9CameraManagerStatusVideoRecordFailed image:nil fileUrl:outputFileURL completion:nil];
         return;
     }
     @synchronized (self) {
-        HJCameraManagerCompletion completion = nil;
+        P9CameraManagerCompletion completion = nil;
         if( _moveFileSaveToPhotosAlbumCompletionQueue.count > 0 ) {
             completion = [_moveFileSaveToPhotosAlbumCompletionQueue firstObject];
             [_moveFileSaveToPhotosAlbumCompletionQueue removeObjectAtIndex:0];
         }
-        [self postNotifyWithStatus:HJCameraManagerStatusVideoRecordEnded image:nil fileUrl:outputFileURL completion:completion];
+        [self postNotifyWithStatus:P9CameraManagerStatusVideoRecordEnded image:nil fileUrl:outputFileURL completion:completion];
     }
 }
 
