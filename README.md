@@ -68,7 +68,7 @@ P9CameraManager.shared().stopRecordingVideo({ (status, image, fileUrl) in
 ```
 
 Utility functions help you to reprocess image or video.
-You can resize by given width, height with keep image rate, resize the you want or crop center square and so on for captured image or video by utility function.
+You can resizing media by given width, height with keep rate, custom resizing, crop center square and so on for captured image or video by utility function.
 
 ```swift
 P9CameraManager.shared().captureStillImage { (status:P9CameraManagerStatus, image:UIImage?, fileUrl:URL?) in
