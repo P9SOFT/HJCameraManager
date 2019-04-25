@@ -1,6 +1,6 @@
 //
 //  P9CameraManager.h
-//  HJBox
+//  
 //
 //  Created by Tae Hyun Na on 2013. 11. 4.
 //  Copyright (c) 2014, P9 SOFT, Inc. All rights reserved.
@@ -29,8 +29,7 @@ typedef NS_ENUM(NSInteger, P9CameraManagerStatus)
     P9CameraManagerStatusMediaProcessingDone,
     P9CameraManagerStatusMediaProcessingFailed,
     P9CameraManagerStatusStartFailedWithInternalError,
-    P9CameraManagerStatusStartFailedWithAccessDenied,
-    kCountOfP9CameraManagerStatus
+    P9CameraManagerStatusStartFailedWithAccessDenied
 };
 
 typedef NS_ENUM(NSInteger, P9CameraManagerFlashMode)
@@ -80,7 +79,14 @@ typedef NS_ENUM(NSInteger, P9CameraManagerImageProcessingType)
     P9CameraManagerImageProcessingTypeCropCenterSquareAndResizeByGivenWidth
 };
 
+typedef NS_ENUM(NSInteger, P9CameraManagerNotifyPreviewType)
+{
+    P9CameraManagerNotifyPreviewTypeNone,
+    P9CameraManagerNotifyPreviewTypeImage
+};
+
 typedef void(^P9CameraManagerCompletion)(P9CameraManagerStatus, UIImage * _Nullable, NSURL * _Nullable);
+typedef void(^P9CameraManagerPreviewHandler)(CMSampleBufferRef _Nullable);
 
 @interface P9CameraManager : NSObject
 
@@ -96,6 +102,7 @@ typedef void(^P9CameraManagerCompletion)(P9CameraManagerStatus, UIImage * _Nulla
 - (BOOL)recordVideoToFileUrl:(NSURL * _Nullable)fileUrl;
 - (void)stopRecordingVideo:(P9CameraManagerCompletion _Nullable)completion;
 - (void)setVideoOrientationByDeviceOrietation:(UIDeviceOrientation)deviceOrientation;
+- (void)setPreviewHandler:(P9CameraManagerPreviewHandler _Nullable)previewHandler;
 
 + (void)processingImage:(UIImage * _Nullable)image type:(P9CameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize completion:(P9CameraManagerCompletion _Nullable)completion;
 + (void)processingVideo:(NSURL * _Nullable)fileUrl toOutputFileUrl:(NSURL * _Nullable)outputFileUrl type:(P9CameraManagerImageProcessingType)type referenceSize:(CGSize)referenceSize preset:(NSString * _Nullable)preset completion:(P9CameraManagerCompletion _Nullable)completion;
@@ -107,7 +114,7 @@ typedef void(^P9CameraManagerCompletion)(P9CameraManagerStatus, UIImage * _Nulla
 @property (nonatomic, assign) P9CameraManagerDevicePosition devicePosition;
 @property (nonatomic, assign) P9CameraManagerVideoOrientation videoOrientation;
 @property (nonatomic, assign) P9CameraManagerPreviewContentMode previewContentMode;
-@property (nonatomic, assign) BOOL notifyPreviewImage;
+@property (nonatomic, assign) P9CameraManagerNotifyPreviewType notifyPreviewType;
 @property (nonatomic, readonly) BOOL isVideoRecording;
 
 @end

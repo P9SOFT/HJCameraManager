@@ -1,6 +1,6 @@
 //
 //  P9CameraManager.m
-//  HJBox
+//
 //
 //  Created by Tae Hyun Na on 2013. 11. 4.
 //  Copyright (c) 2014, P9 SOFT, Inc. All rights reserved.
@@ -16,6 +16,7 @@
     P9CameraManagerDevicePosition       _devicePosition;
     P9CameraManagerVideoOrientation     _videoOrientation;
     P9CameraManagerPreviewContentMode   _previewContentMode;
+    P9CameraManagerPreviewHandler       _previewHanlder;
 }
 
 @property (nonatomic, strong) AVCaptureSession *session;
@@ -69,6 +70,7 @@
         _devicePosition = P9CameraManagerDevicePositionBack;
         _videoOrientation = P9CameraManagerVideoOrientationPortrait;
         _previewContentMode = P9CameraManagerPreviewContentModeResizeAspect;
+        _notifyPreviewType = P9CameraManagerNotifyPreviewTypeNone;
         _videoOutputSerialQueue = dispatch_queue_create("p9soft.manager.p9camera-videoOutput", DISPATCH_QUEUE_SERIAL);
         if( (_capturePreviewCompletionQueue = [NSMutableArray new]) == nil ) {
             return nil;
@@ -447,6 +449,13 @@
     }
 }
 
+- (void)setPreviewHandler:(P9CameraManagerPreviewHandler)previewHandler
+{
+    @synchronized (self) {
+        _previewHanlder = previewHandler;
+    }
+}
+
 + (dispatch_queue_t)imageProcessQueue
 {
     static dispatch_once_t once;
@@ -562,7 +571,7 @@
         [[NSNotificationCenter defaultCenter] postNotificationName:P9CameraManagerNotification object:self userInfo:paramDict];
     });
 }
-    
+
 - (AVCaptureConnection *)videoConnectionOfCaptureOutput:(AVCaptureOutput *)output
 {
     if( output == nil ) {
@@ -1288,43 +1297,54 @@
 
 - (void)captureOutput:(AVCaptureOutput *)output didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
 {
-    BOOL notify = _notifyPreviewImage;
     NSArray *pair = nil;
+    P9CameraManagerNotifyPreviewType notifyPreviewType = P9CameraManagerNotifyPreviewTypeNone;
     
     @synchronized (self) {
         if( _capturePreviewCompletionQueue.count > 0 ) {
             pair = [_capturePreviewCompletionQueue firstObject];
             [_capturePreviewCompletionQueue removeObjectAtIndex:0];
         }
+        notifyPreviewType = _notifyPreviewType;
+        if( _previewHanlder != nil ) {
+            _previewHanlder(sampleBuffer);
+        }
     }
     
-    if( (notify == YES) || (pair != nil) ) {
-        P9CameraManagerVideoOrientation orientation = P9CameraManagerVideoOrientationPortrait;
-        if( pair.count > 0 ) {
-            orientation = (P9CameraManagerVideoOrientation)[pair[0] integerValue];
-            switch( orientation ) {
-                case P9CameraManagerVideoOrientationLandscapeLeft :
-                    orientation = P9CameraManagerVideoOrientationLandscapeRight;
-                    break;
-                case P9CameraManagerVideoOrientationLandscapeRight :
-                    orientation = P9CameraManagerVideoOrientationLandscapeLeft;
-                    break;
-                default :
-                    break;
-            }
+    if( (notifyPreviewType == P9CameraManagerNotifyPreviewTypeNone) && (pair.count == 0) ) {
+        return;
+    }
+    
+    P9CameraManagerVideoOrientation orientation = P9CameraManagerVideoOrientationPortrait;
+    if( pair.count > 0 ) {
+        orientation = (P9CameraManagerVideoOrientation)[pair[0] integerValue];
+        switch( orientation ) {
+            case P9CameraManagerVideoOrientationLandscapeLeft :
+                orientation = P9CameraManagerVideoOrientationLandscapeRight;
+                break;
+            case P9CameraManagerVideoOrientationLandscapeRight :
+                orientation = P9CameraManagerVideoOrientationLandscapeLeft;
+                break;
+            default :
+                break;
         }
-        P9CameraManagerCompletion completion = nil;
-        if( pair.count > 1 ) {
-            completion = (P9CameraManagerCompletion)pair[1];
-        }
-        UIImage *image = nil;
-        if( sampleBuffer != NULL ) {
-            image = [P9CameraManager orientationFixImage:[self imageFromSampleBuffer:sampleBuffer] videoOrientation:orientation];
-        }
-        if( (image != nil) && (notify == YES) ) {
-            [self postNotifyWithStatus:P9CameraManagerStatusPreviewImageCaptured image:image fileUrl:nil completion:nil];
-        }
+    }
+    UIImage *image = nil;
+    if( (sampleBuffer != NULL) && ((notifyPreviewType == P9CameraManagerNotifyPreviewTypeImage) || (pair != nil)) ) {
+        image = [P9CameraManager orientationFixImage:[self imageFromSampleBuffer:sampleBuffer] videoOrientation:orientation];
+    }
+    if( pair != nil ) {
+        P9CameraManagerCompletion completion = (pair.count > 1 ? (P9CameraManagerCompletion)pair[1] : nil);
         [self postNotifyWithStatus:(image != nil ? P9CameraManagerStatusStillImageCaptured : P9CameraManagerStatusStillImageCaptureFailed) image:image fileUrl:nil completion:completion];
+    }
+    switch( notifyPreviewType ) {
+        case P9CameraManagerNotifyPreviewTypeImage :
+            if( image != nil ) {
+                [self postNotifyWithStatus:P9CameraManagerStatusPreviewImageCaptured image:image fileUrl:nil completion:nil];
+            }
+            break;
+        default :
+            break;
     }
 }
 

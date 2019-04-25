@@ -98,6 +98,19 @@ Observe P9CameraManager event to deal with business logic.
 NotificationCenter.default.addObserver(self, selector:#selector(cameraManagerReport), name:NSNotification.Name(rawValue: P9CameraManagerNotification), object:nil)
 ```
 
+For example, you can get every frame of previewing image.
+
+```swift
+@objc func cameraManagerReport(notification:NSNotification) {
+    guard let userInfo = notification.userInfo, let status = P9CameraManagerStatus(rawValue: userInfo[P9CameraManagerNotifyParameterKeyStatus] as? Int ?? 0) else {
+        return
+    }
+    if status == .previewImageCaptured, let image = userInfo[P9CameraManagerNotifyParameterKeyImage] as? UIImage {
+        // do something you want.
+    }
+}
+```
+
 You can do all things with changing camera device position, video orientation, preview mode.
 
 # License
