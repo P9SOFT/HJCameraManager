@@ -67,6 +67,26 @@ P9CameraManager.shared().stopRecordingVideo({ (status, image, fileUrl) in
 }
 ```
 
+You can handle every all frame images by setting preview handler.
+```swift
+P9CameraManager.shared().setPreviewHandler { (sampleBuffer) in
+    let request = VNCoreMLRequest(model: model) { (finishedRequest, error) in
+        if let result = finishedRequest.results as? [VNClassificationObservation] {
+            let descriptions = result.prefix(2).map { classification in
+                return String(format: "%@ (%.2f)", classification.identifier, classification.confidence)
+            }
+            DispatchQueue.main.async {
+                self.desciptionLabel.text = descriptions.joined(seprator: "\n")
+            }
+        }
+    }
+    request.imageCropAndScaleOption = .centerCrop
+    if let sampleBuffer = sampleBuffer, let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+        try? VNImageRequestHandler(cvPixelBuffer: imageBuffer, options: [:]).perform([request])
+    }
+}
+```
+
 Utility functions help you to reprocess image or video.
 You can resize by given width, height with keep image rate, resize the you want or crop center square and so on for captured image or video by utility function.
 
