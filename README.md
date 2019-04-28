@@ -67,6 +67,26 @@ P9CameraManager.shared().stopRecordingVideo({ (status, image, fileUrl) in
 }
 ```
 
+You can handle every all frame images by setting preview handler.
+```swift
+P9CameraManager.shared().setPreviewHandler { (sampleBuffer) in
+    let request = VNCoreMLRequest(model: model) { (finishedRequest, error) in
+        if let result = finishedRequest.results as? [VNClassificationObservation] {
+            let descriptions = result.prefix(2).map { classification in
+                return String(format: "%@ (%.2f)", classification.identifier, classification.confidence)
+            }
+            DispatchQueue.main.async {
+                self.desciptionLabel.text = descriptions.joined(seprator: "\n")
+            }
+        }
+    }
+    request.imageCropAndScaleOption = .centerCrop
+    if let sampleBuffer = sampleBuffer, let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+        try? VNImageRequestHandler(cvPixelBuffer: imageBuffer, options: [:]).perform([request])
+    }
+}
+```
+
 Utility functions help you to reprocess image or video.
 You can resizing media by given width, height with keep rate, custom resizing, crop center square and so on for captured image or video by utility function.
 
@@ -96,6 +116,19 @@ Observe P9CameraManager event to deal with business logic.
 
 ```swift
 NotificationCenter.default.addObserver(self, selector:#selector(cameraManagerReport), name:NSNotification.Name(rawValue: P9CameraManagerNotification), object:nil)
+```
+
+For example, you can get every frame of previewing image.
+
+```swift
+@objc func cameraManagerReport(notification:NSNotification) {
+    guard let userInfo = notification.userInfo, let status = P9CameraManagerStatus(rawValue: userInfo[P9CameraManagerNotifyParameterKeyStatus] as? Int ?? 0) else {
+        return
+    }
+    if status == .previewImageCaptured, let image = userInfo[P9CameraManagerNotifyParameterKeyImage] as? UIImage {
+        // do something you want.
+    }
+}
 ```
 
 You can do all things with changing camera device position, video orientation, preview mode.
